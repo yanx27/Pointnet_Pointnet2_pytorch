@@ -1,4 +1,4 @@
-# Pytorch implementation of PointNet and PointNet++ 
+# Pytorch Reproduction of PointNet and PointNet++ 
 
 ## Data Preparation
 * Download ModelNet [here](http://modelnet.cs.princeton.edu/ModelNet40.zip) and ShapeNet [here](https://www.shapenet.org/)
