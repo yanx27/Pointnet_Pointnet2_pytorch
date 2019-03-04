@@ -149,12 +149,12 @@ def main(args):
         total_train_acc += train_hist_acc
         total_test_acc += test_hist_acc
 
-        print('Loss: %f' % history['loss'][-1])
-        logger.info('Loss: %f' , history['loss'][-1])
+        print('\r Loss: %f' % history['loss'][-1])
+        logger.info('Loss: %.2f' , history['loss'][-1])
         if COMPUTE_TRAIN_METRICS:
             print('Train Accuracy: %f' % (train_metrics['accuracy']))
             logger.info('Train Accuracy: %f' , (train_metrics['accuracy']))
-        print('Test Accuracy: %f' % test_metrics['accuracy'])
+        print('\r Test Accuracy: %.2f%%' % test_metrics['accuracy'])
         logger.info('Test Accuracy: %f' , test_metrics['accuracy'])
 
         if (test_metrics['accuracy'] >= best_tst_accuracy) and epoch > 5:
