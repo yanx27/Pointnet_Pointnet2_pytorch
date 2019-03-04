@@ -97,7 +97,7 @@ def main(args):
 
     '''MODEL LOADING'''
     num_class = 16 if args.data == 'ShapeNet' else 40
-    model = PointNetCls(num_class).cuda()
+    model = PointNetCls(num_class).cuda() if args.model_name == 'pointnet' else PointNet2ClsMsg().cuda()
     if args.pretrain is not None:
         print('Use pretrain model...')
         logger.info('Use pretrain model')
