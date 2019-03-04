@@ -1,7 +1,7 @@
 # Pytorch implementation of PointNet and PointNet++ 
 
 ## Data Preparation
-* Download ModelNet [here]() and ShapeNet [here]()
+* Download ModelNet [here](http://modelnet.cs.princeton.edu/ModelNet40.zip) and ShapeNet [here](https://www.shapenet.org/)
 * Put them respectively in `./data/ModelNet` and `./data/ShapeNet`
 
 ## Training for classification
