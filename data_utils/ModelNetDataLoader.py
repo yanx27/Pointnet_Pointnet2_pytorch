@@ -1,7 +1,6 @@
-# *_*coding:utf-8 *_*
 import numpy as np
-import h5py
 import warnings
+import h5py
 from torch.utils.data import Dataset
 warnings.filterwarnings('ignore')
 
@@ -12,15 +11,15 @@ def load_h5(h5_filename):
     seg = f['pid'][:]
     return (data, label, seg)
 
-def load_data(dir, classification = False):
-    data_train0, label_train0, Seglabel_train0  = load_h5(dir + 'ply_data_train0.h5')
-    data_train1, label_train1, Seglabel_train1 = load_h5(dir + 'ply_data_train1.h5')
-    data_train2, label_train2, Seglabel_train2 = load_h5(dir + 'ply_data_train2.h5')
-    data_train3, label_train3, Seglabel_train3 = load_h5(dir + 'ply_data_train3.h5')
-    data_train4, label_train4, Seglabel_train4 = load_h5(dir + 'ply_data_train4.h5')
-    data_train5, label_train5, Seglabel_train5 = load_h5(dir + 'ply_data_train5.h5')
-    data_test0, label_test0, Seglabel_test0 = load_h5(dir + 'ply_data_test0.h5')
-    data_test1 ,label_test1, Seglabel_test1 = load_h5(dir + 'ply_data_test1.h5')
+def load_data(dir,classification = False):
+    data_train0, label_train0,Seglabel_train0  = load_h5(dir + 'ply_data_train0.h5')
+    data_train1, label_train1,Seglabel_train1 = load_h5(dir + 'ply_data_train1.h5')
+    data_train2, label_train2,Seglabel_train2 = load_h5(dir + 'ply_data_train2.h5')
+    data_train3, label_train3,Seglabel_train3 = load_h5(dir + 'ply_data_train3.h5')
+    data_train4, label_train4,Seglabel_train4 = load_h5(dir + 'ply_data_train4.h5')
+    data_train5, label_train5,Seglabel_train5 = load_h5(dir + 'ply_data_train5.h5')
+    data_test0, label_test0,Seglabel_test0 = load_h5(dir + 'ply_data_test0.h5')
+    data_test1, label_test1,Seglabel_test1 = load_h5(dir + 'ply_data_test1.h5')
     train_data = np.concatenate([data_train0,data_train1,data_train2,data_train3,data_train4,data_train5])
     train_label = np.concatenate([label_train0,label_train1,label_train2,label_train3,label_train4,label_train5])
     train_Seglabel = np.concatenate([Seglabel_train0,Seglabel_train1,Seglabel_train2,Seglabel_train3,Seglabel_train4,Seglabel_train5])
@@ -33,16 +32,14 @@ def load_data(dir, classification = False):
     else:
         return train_data, train_Seglabel, test_data, test_Seglabel
 
-
-
-class ShapeNetDataLoader(Dataset):
-    def __init__(self, data, labels, rotation=None):
+class ModelNetDataLoader(Dataset):
+    def __init__(self, data, labels, rotation = None):
         self.data = data
         self.labels = labels
         self.rotation = rotation
 
     def __len__(self):
-        return len(self.data)
+        return len(self.pts)
 
     def rotate_point_cloud_by_angle(self, data, rotation_angle):
         """
@@ -69,5 +66,3 @@ class ShapeNetDataLoader(Dataset):
             return pointcloud, self.labels[index]
         else:
             return self.data[index], self.labels[index]
-
-
