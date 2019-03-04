@@ -5,11 +5,10 @@ import torch.nn.parallel
 import torch.utils.data
 from collections import defaultdict
 from torch.autograd import Variable
-from data_utils.ShapeNetDataLoader import ShapeNetDataLoader
+from data_utils.ShapeNetDataLoader import ShapeNetDataLoader, load_data
 import torch.nn.functional as F
 import datetime
 import logging
-from data_utils.ShapeNetDataLoader import load_data
 from pathlib import Path
 from utils import test_seg
 from tqdm import tqdm
@@ -66,6 +65,7 @@ def main(args):
     logger.info('PARAMETER ...')
     logger.info(args)
     DATA_PATH = './data/%s/' % args.data
+    print('Load data from %s'%DATA_PATH)
     train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
     logger.info("The number of training data is: %d",train_data.shape[0])
     logger.info("The number of test data is: %d", test_data.shape[0])
