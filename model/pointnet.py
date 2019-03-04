@@ -72,10 +72,36 @@ class PointNetEncoder(nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
         if self.global_feat:
-            return x, trans, x_skip
+            return x, trans
         else:
             x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)
-            return torch.cat([x, pointfeat], 1), trans, x_skip
+            return torch.cat([x, pointfeat], 1), trans
+
+class PointNetCls(nn.Module):
+    def __init__(self, k = 2):
+        super(PointNetCls, self).__init__()
+        self.k = k
+        self.feat = PointNetEncoder(global_feat=False)
+        self.conv1 = torch.nn.Conv1d(1088, 512, 1)
+        self.conv2 = torch.nn.Conv1d(512, 256, 1)
+        self.conv3 = torch.nn.Conv1d(256, 128, 1)
+        self.conv4 = torch.nn.Conv1d(128, self.k, 1)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.bn3 = nn.BatchNorm1d(128)
+
+    def forward(self, x):
+        batchsize = x.size()[0]
+        n_pts = x.size()[2]
+        x, trans = self.feat(x)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = self.conv4(x)
+        x = x.transpose(2,1).contiguous()
+        x = F.log_softmax(x.view(-1,self.k), dim=-1)
+        x = x.view(batchsize, n_pts, self.k)
+        return x
 
 
 class PointNetPartSeg(nn.Module):
@@ -95,7 +121,7 @@ class PointNetPartSeg(nn.Module):
     def forward(self, x):
         batchsize = x.size()[0]
         n_pts = x.size()[2]
-        x, trans, x_skip = self.feat(x)
+        x, trans = self.feat(x)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
