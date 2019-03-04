@@ -5,7 +5,6 @@ import torch.nn.parallel
 import torch.utils.data
 from collections import defaultdict
 import torch.nn.functional as F
-from torch.autograd import Variable
 from data_utils.ShapeNetDataLoader import ShapeNetDataLoader, load_data
 import datetime
 import logging
