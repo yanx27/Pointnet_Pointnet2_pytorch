@@ -9,6 +9,12 @@ from collections import defaultdict
 import datetime
 import pandas as pd
 import torch.nn.functional as F
+def to_categorical(y, num_classes):
+    """ 1-hot encodes a tensor """
+    new_y = torch.eye(num_classes)[y.cpu().data.numpy(),]
+    if (y.is_cuda):
+        return new_y.cuda()
+    return new_y
 
 def show_example(x, y, x_reconstruction, y_pred,save_dir, figname):
     x = x.squeeze().cpu().data.numpy()
@@ -41,9 +47,9 @@ def test(model, loader):
     for batch_id, (x, y) in tqdm(enumerate(loader), total=len(loader),smoothing=0.9):
         x = Variable(x).float().cuda()
         y = Variable(y).cuda()
-        y_pred, x_reconstruction = model(x, y)
+        y_pred = model(x)
         _, y_pred = torch.max(y_pred, -1)
-        acc = y_pred.unsqueeze(1) == y.type(torch.LongTensor).cuda() #TODO use cpu?
+        acc = y_pred.unsqueeze(1) == y.type(torch.LongTensor).cuda()
         metrics['accuracy'].append((acc).cpu().data.numpy())
     hist_acc.append(np.concatenate(metrics['accuracy']).mean())
     metrics['accuracy'] = np.concatenate(metrics['accuracy']).mean()
