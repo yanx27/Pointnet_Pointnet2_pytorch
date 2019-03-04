@@ -18,6 +18,7 @@ def to_categorical(y, num_classes):
 
 def show_example(x, y, x_reconstruction, y_pred,save_dir, figname):
     x = x.squeeze().cpu().data.numpy()
+    x = x.permute(0,2,1)
     y = y.cpu().data.numpy()
     x_reconstruction = x_reconstruction.squeeze().cpu().data.numpy()
     _, y_pred = torch.max(y_pred, -1)
@@ -45,14 +46,17 @@ def test(model, loader):
     metrics = defaultdict(lambda:list())
     hist_acc = []
     for batch_id, (x, y) in tqdm(enumerate(loader), total=len(loader),smoothing=0.9):
-        x = Variable(x).float().cuda()
-        y = Variable(y).cuda()
+        x = x.float().cuda()
+        y = y.long().cuda()
+        x = x.permute(0,2,1)
         y_pred = model(x)
+
         _, y_pred = torch.max(y_pred, -1)
-        acc = y_pred.unsqueeze(1) == y.type(torch.LongTensor).cuda()
-        metrics['accuracy'].append((acc).cpu().data.numpy())
-    hist_acc.append(np.concatenate(metrics['accuracy']).mean())
-    metrics['accuracy'] = np.concatenate(metrics['accuracy']).mean()
+        pred_choice = y_pred.data.max(1)[1]
+        correct = pred_choice.eq(y.data).cpu().sum()
+        metrics['accuracy'].append(correct.data)
+    hist_acc.append(np.mean(metrics['accuracy']))
+    metrics['accuracy'] = np.mean(metrics['accuracy'])
     return metrics, hist_acc
 
 def compute_iou(pred,target,iou_tabel=None):
