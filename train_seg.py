@@ -5,11 +5,11 @@ import torch.nn.parallel
 import torch.utils.data
 from collections import defaultdict
 from torch.autograd import Variable
-from data_util.ShapeNetDataLoader import ShapeNetDataLoader
+from data_utils.ShapeNetDataLoader import ShapeNetDataLoader
 import torch.nn.functional as F
 import datetime
 import logging
-from data_util.ShapeNetDataLoader import load_segdata
+from data_utils.ShapeNetDataLoader import load_data
 from pathlib import Path
 from utils import test_seg
 from tqdm import tqdm
@@ -23,7 +23,7 @@ for cat in seg_classes.keys():
         seg_label_to_cat[label] = cat
 
 def parse_args():
-    parser = argparse.ArgumentParser('PointCapsNetSeg')
+    parser = argparse.ArgumentParser('PointNet2')
     parser.add_argument('--batchSize', type=int, default=12, help='input batch size')
     parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
     parser.add_argument('--epoch', type=int, default=25, help='number of epochs for training')
@@ -66,7 +66,7 @@ def main(args):
     logger.info('PARAMETER ...')
     logger.info(args)
     DATA_PATH = './data/%s/' % args.data
-    train_data, train_label, test_data, test_label = load_segdata(DATA_PATH)
+    train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
     logger.info("The number of training data is: %d",train_data.shape[0])
     logger.info("The number of test data is: %d", test_data.shape[0])
     ROTATION = (int(args.rotation[0:2]), int(args.rotation[3:5])) if args.rotation is not None else None
