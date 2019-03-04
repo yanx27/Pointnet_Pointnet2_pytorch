@@ -20,7 +20,7 @@ def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('PointNet2')
 
-    parser.add_argument('--batchsize', type=int, default=32,
+    parser.add_argument('--batchsize', type=int, default=8,
                         help='batch size in training')
     parser.add_argument('--epoch',  default=5, type=int,
                         help='number of epoch in training')
@@ -131,14 +131,13 @@ def main(args):
         for batch_id, (data, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
             data = data.permute(0,2,1).float().cuda()
             target = target.squeeze()
-            target = to_categorical(target, num_class)
+            if args.model_name =='pointnet':
+                target = to_categorical(target, num_class)
             target = target.long().cuda()
             y_pred = model(data)
 
             loss = F.nll_loss(y_pred,target)
-
             history['loss'].append(loss.cpu().data.numpy())
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
