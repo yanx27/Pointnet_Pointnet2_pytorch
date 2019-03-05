@@ -76,7 +76,7 @@ def main(args):
                                              shuffle=True, num_workers=int(args.workers))
 
     test_dataset = ShapeNetDataLoader(test_data,test_label)
-    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8,
+    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize,
                                                  shuffle=True, num_workers=int(args.workers))
 
     num_classes = 50
@@ -134,8 +134,8 @@ def main(args):
             loss.backward()
             optimizer.step()
 
-        if COMPUTE_TRAIN_METRICS:
-            train_metrics, train_hist_acc = test_seg(model, dataloader)
+        if epoch % 10 == 0:
+            train_metrics, train_hist_acc, _ = test_seg(model, dataloader,seg_label_to_cat)
             print('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
                 epoch, blue('train'), history['loss'][-1], train_metrics['accuracy'],train_metrics['iou']))
             logger.info('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
