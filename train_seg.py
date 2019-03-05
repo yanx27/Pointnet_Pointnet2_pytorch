@@ -95,8 +95,8 @@ def main(args):
     init_epoch = int(pretrain[-14:-11]) if args.pretrain is not None else 0
 
     def adjust_learning_rate(optimizer, step):
-        """Sets the learning rate to the initial LR decayed by 30 every 200000 steps"""
-        lr = args.learning_rate * (0.3 ** (step // 200000))
+        """Sets the learning rate to the initial LR decayed by 30 every 20000 steps"""
+        lr = args.learning_rate * (0.3 ** (step // 20000))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
@@ -143,7 +143,7 @@ def main(args):
             step += 1
             adjust_learning_rate(optimizer, step)
 
-        if epoch % 10  == 0:
+        if epoch % 10 == 0:
             train_metrics, train_hist_acc, _ = test_seg(model, dataloader,seg_label_to_cat)
             print('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
                 epoch, blue('train'), history['loss'][-1], train_metrics['accuracy'],train_metrics['iou']))
