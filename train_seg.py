@@ -21,21 +21,22 @@ for cat in seg_classes.keys():
     for label in seg_classes[cat]:
         seg_label_to_cat[label] = cat
 
+
+
 def parse_args():
     parser = argparse.ArgumentParser('PointNet2')
-    parser.add_argument('--batchSize', type=int, default=12, help='input batch size')
+    parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
     parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
-    parser.add_argument('--epoch', type=int, default=25, help='number of epochs for training')
+    parser.add_argument('--epoch', type=int, default=201, help='number of epochs for training')
     parser.add_argument('--data', type=str, default='ShapeNet', help='data path')
     parser.add_argument('--log_dir', type=str, default='logs/',help='decay rate of learning rate')
     parser.add_argument('--pretrain', type=str, default=None,help='whether use pretrain model')
-    parser.add_argument('--train_metric', type=bool, default=False, help='Whether evaluate on training data')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--rotation',  default=None,help='range of training rotation')
     parser.add_argument('--model_name', type=str, default='pointnet2', help='Name of model')
-    parser.add_argument('--learning_rate', type=float, default=5e-4, help='learning rate for training')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate for training')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
-    parser.add_argument('--optimizer', type=str, default='SGD', help='type of optimizer')
+    parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
 
     return parser.parse_args()
@@ -76,7 +77,7 @@ def main(args):
                                              shuffle=True, num_workers=int(args.workers))
 
     test_dataset = ShapeNetDataLoader(test_data,test_label)
-    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8,
+    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize,
                                                  shuffle=True, num_workers=int(args.workers))
 
     num_classes = 50
@@ -92,6 +93,12 @@ def main(args):
         logger.info('Training from scratch')
     pretrain = args.pretrain
     init_epoch = int(pretrain[-14:-11]) if args.pretrain is not None else 0
+
+    def adjust_learning_rate(optimizer, step):
+        """Sets the learning rate to the initial LR decayed by 30 every 20000 steps"""
+        lr = args.learning_rate * (0.3 ** (step // 20000))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
 
     if args.optimizer == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
@@ -116,7 +123,7 @@ def main(args):
     history = defaultdict(lambda: list())
     best_acc = 0
     best_meaniou = 0
-    COMPUTE_TRAIN_METRICS = args.train_metric
+    step = 0
 
     for epoch in range(init_epoch,args.epoch):
         for i, data in tqdm(enumerate(dataloader, 0),total=len(dataloader),smoothing=0.9):
@@ -133,9 +140,11 @@ def main(args):
             history['loss'].append(loss.cpu().data.numpy())
             loss.backward()
             optimizer.step()
+            step += 1
+            adjust_learning_rate(optimizer, step)
 
-        if COMPUTE_TRAIN_METRICS:
-            train_metrics, train_hist_acc = test_seg(model, dataloader)
+        if epoch % 10 == 0:
+            train_metrics, train_hist_acc, _ = test_seg(model, dataloader,seg_label_to_cat)
             print('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
                 epoch, blue('train'), history['loss'][-1], train_metrics['accuracy'],train_metrics['iou']))
             logger.info('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
@@ -150,7 +159,7 @@ def main(args):
                  epoch, 'test', test_metrics['accuracy'],test_metrics['iou']))
         if test_metrics['accuracy'] > best_acc:
             best_acc = test_metrics['accuracy']
-            torch.save(model.state_dict(), '%s/PointCapsSeg_%.3d_%.4f.pth' % (checkpoints_dir, epoch, best_acc))
+            torch.save(model.state_dict(), '%s/%s_%.3d_%.4f.pth' % (checkpoints_dir,args.model_name, epoch, best_acc))
             logger.info(cat_mean_iou)
             logger.info('Save model..')
             print('Save model..')

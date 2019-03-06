@@ -12,6 +12,8 @@ def load_h5(h5_filename):
     seg = f['pid'][:]
     return (data, label, seg)
 
+
+
 def load_data(dir, classification = False):
     data_train0, label_train0, Seglabel_train0  = load_h5(dir + 'ply_data_train0.h5')
     data_train1, label_train1, Seglabel_train1 = load_h5(dir + 'ply_data_train1.h5')
@@ -44,6 +46,13 @@ class ShapeNetDataLoader(Dataset):
     def __len__(self):
         return len(self.data)
 
+    def pc_normalize(self, pc):
+        centroid = np.mean(pc, axis=0)
+        pc = pc - centroid
+        m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
+        pc = pc / m
+        return pc
+
     def rotate_point_cloud_by_angle(self, data, rotation_angle):
         """
         Rotate the point cloud along up direction with certain angle.
@@ -62,12 +71,12 @@ class ShapeNetDataLoader(Dataset):
 
     def __getitem__(self, index):
         if self.rotation is not None:
-            pointcloud = self.data[index]
+            pointcloud = self.pc_normalize(self.data[index])
             angle = np.random.randint(self.rotation[0], self.rotation[1]) * np.pi / 180
             pointcloud = self.rotate_point_cloud_by_angle(pointcloud, angle)
 
             return pointcloud, self.labels[index]
         else:
-            return self.data[index], self.labels[index]
+            return self.pc_normalize(self.data[index]), self.labels[index]
 
 

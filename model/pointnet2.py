@@ -83,7 +83,7 @@ class PointNet2PartSeg(nn.Module):
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)
         l0_points = self.fp1(xyz, l1_xyz, None, l1_points)
         # FC layers
-        feat = self.bn1(self.conv1(l0_points))
+        feat =  F.relu(self.bn1(self.conv1(l0_points)))
         x = self.drop1(feat)
         x = self.conv2(x)
         x = F.log_softmax(x, dim=1)
