@@ -20,12 +20,12 @@ def loadDataFile(filename):
     return load_h5(filename)
 
 def recognize_all_data(test_area = 5):
-    ALL_FILES = getDataFiles('./indoor3d_sem_seg_hdf5_data/all_files.txt')
-    room_filelist = [line.rstrip() for line in open('./indoor3d_sem_seg_hdf5_data/room_filelist.txt')]
+    ALL_FILES = getDataFiles('./data/indoor3d_sem_seg_hdf5_data/all_files.txt')
+    room_filelist = [line.rstrip() for line in open('./data/indoor3d_sem_seg_hdf5_data/room_filelist.txt')]
     data_batch_list = []
     label_batch_list = []
     for h5_filename in ALL_FILES:
-        data_batch, label_batch = loadDataFile(h5_filename)
+        data_batch, label_batch = loadDataFile('./data/' + h5_filename)
         data_batch_list.append(data_batch)
         label_batch_list.append(label_batch)
     data_batches = np.concatenate(data_batch_list, 0)
