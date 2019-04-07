@@ -8,7 +8,7 @@ def load_h5(h5_filename):
     f = h5py.File(h5_filename)
     data = f['data'][:]
     label = f['label'][:]
-    seg = f['pid'][:]
+    seg = []
     return (data, label, seg)
 
 def load_data(dir,classification = False):
@@ -17,12 +17,11 @@ def load_data(dir,classification = False):
     data_train2, label_train2,Seglabel_train2 = load_h5(dir + 'ply_data_train2.h5')
     data_train3, label_train3,Seglabel_train3 = load_h5(dir + 'ply_data_train3.h5')
     data_train4, label_train4,Seglabel_train4 = load_h5(dir + 'ply_data_train4.h5')
-    data_train5, label_train5,Seglabel_train5 = load_h5(dir + 'ply_data_train5.h5')
     data_test0, label_test0,Seglabel_test0 = load_h5(dir + 'ply_data_test0.h5')
     data_test1, label_test1,Seglabel_test1 = load_h5(dir + 'ply_data_test1.h5')
-    train_data = np.concatenate([data_train0,data_train1,data_train2,data_train3,data_train4,data_train5])
-    train_label = np.concatenate([label_train0,label_train1,label_train2,label_train3,label_train4,label_train5])
-    train_Seglabel = np.concatenate([Seglabel_train0,Seglabel_train1,Seglabel_train2,Seglabel_train3,Seglabel_train4,Seglabel_train5])
+    train_data = np.concatenate([data_train0,data_train1,data_train2,data_train3,data_train4])
+    train_label = np.concatenate([label_train0,label_train1,label_train2,label_train3,label_train4])
+    train_Seglabel = np.concatenate([Seglabel_train0,Seglabel_train1,Seglabel_train2,Seglabel_train3,Seglabel_train4])
     test_data = np.concatenate([data_test0,data_test1])
     test_label = np.concatenate([label_test0,label_test1])
     test_Seglabel = np.concatenate([Seglabel_test0,Seglabel_test1])
@@ -39,7 +38,7 @@ class ModelNetDataLoader(Dataset):
         self.rotation = rotation
 
     def __len__(self):
-        return len(self.pts)
+        return len(self.data)
 
     def rotate_point_cloud_by_angle(self, data, rotation_angle):
         """
