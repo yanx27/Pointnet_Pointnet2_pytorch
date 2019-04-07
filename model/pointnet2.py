@@ -75,23 +75,15 @@ class PointNet2PartSeg(nn.Module): #TODO part segmentation tasks
 
     def forward(self, xyz):
         # Set Abstraction layers
-        print('original xyz:',xyz.size())
         l1_xyz, l1_points = self.sa1(xyz, None)
-        print('after sa1:',l1_xyz.size(),l1_points.size())
         l2_xyz, l2_points = self.sa2(l1_xyz, l1_points)
-        print('after sa2:', l2_xyz.size(), l2_points.size())
         l3_xyz, l3_points = self.sa3(l2_xyz, l2_points)
-        print('after sa3:', l3_xyz.size(), l3_points.size())
         # Feature Propagation layers
         l2_points = self.fp3(l2_xyz, l3_xyz, l2_points, l3_points)
-        print('after fp3:', l2_points.size())
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)
-        print('after fp2:', l1_points.size())
         l0_points = self.fp1(xyz, l1_xyz, None, l1_points)
-        print('after fp1:', l0_points.size())
         # FC layers
         feat =  F.relu(self.bn1(self.conv1(l0_points)))
-        print('after fc:', feat.size())
         x = self.drop1(feat)
         x = self.conv2(x)
         x = F.log_softmax(x, dim=1)
