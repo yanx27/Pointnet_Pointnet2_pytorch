@@ -72,7 +72,7 @@ def compute_iou(pred,target,iou_tabel=None):
             iou_tabel[cat,1] += 1
     return np.mean(ious), iou_tabel
 
-def test_seg(model, loader, catdict, num_classes = 50):
+def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
     ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
     iou_tabel = np.zeros((len(catdict),3))
     metrics = defaultdict(lambda:list())
@@ -82,7 +82,10 @@ def test_seg(model, loader, catdict, num_classes = 50):
         points, target = Variable(points.float()), Variable(target.long())
         points = points.transpose(2, 1)
         points, target = points.cuda(), target.cuda()
-        pred, _ = model(points)
+        if pointnet2forseg:
+            pred, _ = model(points[:, :3, :], points[:, 3:, :])
+        else:
+            pred, _ = model(points)
         # print(pred.size())
         mean_iou, iou_tabel = compute_iou(pred,target,iou_tabel)
         pred = pred.contiguous().view(-1, num_classes)
