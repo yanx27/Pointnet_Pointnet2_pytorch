@@ -86,10 +86,10 @@ class STNkd(nn.Module):
 
 
 class PointNetEncoder(nn.Module):
-    def __init__(self, global_feat=True, feature_transform=False):
+    def __init__(self, global_feat=True, feature_transform=False, semseg = False):
         super(PointNetEncoder, self).__init__()
-        self.stn = STN3d()
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.stn = STN3d() if not semseg else STNkd(k=9)
+        self.conv1 = torch.nn.Conv1d(3, 64, 1) if not semseg else torch.nn.Conv1d(9, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
         self.bn1 = nn.BatchNorm1d(64)
@@ -186,11 +186,11 @@ def feature_transform_reguliarzer(trans):
     return loss
 
 
-class PointNetPartSeg(nn.Module):
-    def __init__(self,num_class):
-        super(PointNetPartSeg, self).__init__()
+class PointNetSeg(nn.Module):
+    def __init__(self,num_class,feature_transform=False, semseg = False):
+        super(PointNetSeg, self).__init__()
         self.k = num_class
-        self.feat = PointNetEncoder(global_feat=False)
+        self.feat = PointNetEncoder(global_feat=False,feature_transform=feature_transform, semseg = semseg)
         self.conv1 = torch.nn.Conv1d(1088, 512, 1)
         self.conv2 = torch.nn.Conv1d(512, 256, 1)
         self.conv3 = torch.nn.Conv1d(256, 128, 1)
@@ -203,7 +203,7 @@ class PointNetPartSeg(nn.Module):
     def forward(self, x):
         batchsize = x.size()[0]
         n_pts = x.size()[2]
-        x, trans = self.feat(x)
+        x, trans, trans_feat = self.feat(x)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -211,8 +211,7 @@ class PointNetPartSeg(nn.Module):
         x = x.transpose(2,1).contiguous()
         x = F.log_softmax(x.view(-1,self.k), dim=-1)
         x = x.view(batchsize, n_pts, self.k)
-        x = x.permute(0,2,1)
-        return x, trans
+        return x, trans_feat
 
 
 
