@@ -13,7 +13,7 @@ from pathlib import Path
 from utils import test_seg
 from tqdm import tqdm
 from model.pointnet2 import PointNet2PartSeg
-from model.pointnet import PointNetPartSeg
+from model.pointnet import PointNetPartSeg, feature_transform_reguliarzer
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27], 'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 seg_label_to_cat = {} # {0:Airplane, 1:Airplane, ...49:Table}
@@ -25,11 +25,9 @@ for cat in seg_classes.keys():
 
 def parse_args():
     parser = argparse.ArgumentParser('PointNet2')
-    parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
+    parser.add_argument('--batchsize', type=int, default=32, help='input batch size')
     parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
     parser.add_argument('--epoch', type=int, default=201, help='number of epochs for training')
-    parser.add_argument('--data', type=str, default='ShapeNet', help='data path')
-    parser.add_argument('--log_dir', type=str, default='logs/',help='decay rate of learning rate')
     parser.add_argument('--pretrain', type=str, default=None,help='whether use pretrain model')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--rotation',  default=None,help='range of training rotation')
@@ -38,6 +36,7 @@ def parse_args():
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
+    parser.add_argument('--feature_transform', default=False, help="use feature transform in pointnet")
 
     return parser.parse_args()
 
@@ -50,7 +49,7 @@ def main(args):
     file_dir.mkdir(exist_ok=True)
     checkpoints_dir = file_dir.joinpath('checkpoints/')
     checkpoints_dir.mkdir(exist_ok=True)
-    log_dir = file_dir.joinpath(args.log_dir)
+    log_dir = file_dir.joinpath('logs/')
     log_dir.mkdir(exist_ok=True)
 
     '''LOG'''
@@ -65,7 +64,7 @@ def main(args):
     logger.info('---------------------------------------------------TRANING---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
-    DATA_PATH = './data/%s/' % args.data
+    DATA_PATH = './data/ShapeNet/'
     print('Load data from %s'%DATA_PATH)
     train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
     logger.info("The number of training data is: %d",train_data.shape[0])
@@ -73,16 +72,16 @@ def main(args):
     ROTATION = (int(args.rotation[0:2]), int(args.rotation[3:5])) if args.rotation is not None else None
 
     dataset = ShapeNetDataLoader(train_data,train_label,rotation=ROTATION)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchSize,
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
                                              shuffle=True, num_workers=int(args.workers))
 
     test_dataset = ShapeNetDataLoader(test_data,test_label)
-    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize,
+    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize,
                                                  shuffle=True, num_workers=int(args.workers))
 
     num_classes = 50
     blue = lambda x: '\033[94m' + x + '\033[0m'
-    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetPartSeg(num_classes)
+    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetPartSeg(num_classes,feature_transform=True)
 
     if args.pretrain is not None:
         model.load_state_dict(torch.load(args.pretrain))
@@ -133,23 +132,17 @@ def main(args):
             points, target = points.cuda(), target.cuda()
             optimizer.zero_grad()
             model = model.train()
-            pred, _ = model(points)
+            pred, trans_feat = model(points)
             pred = pred.contiguous().view(-1, num_classes)
             target = target.view(-1, 1)[:, 0]
             loss = F.nll_loss(pred, target)
+            if args.feature_transform and args.model_name == 'pointnet':
+                loss += feature_transform_reguliarzer(trans_feat) * 0.001
             history['loss'].append(loss.cpu().data.numpy())
             loss.backward()
             optimizer.step()
             step += 1
             adjust_learning_rate(optimizer, step)
-
-        if epoch % 10 == 0:
-            train_metrics, train_hist_acc, _ = test_seg(model, dataloader,seg_label_to_cat)
-            print('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
-                epoch, blue('train'), history['loss'][-1], train_metrics['accuracy'],train_metrics['iou']))
-            logger.info('Epoch %d  %s loss: %f accuracy: %f  meanIOU: %f' % (
-                epoch, 'train', history['loss'][-1], train_metrics['accuracy'],train_metrics['iou']))
-
 
         test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat)
 
