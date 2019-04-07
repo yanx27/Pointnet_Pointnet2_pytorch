@@ -13,7 +13,6 @@ def load_h5(h5_filename):
     return (data, label, seg)
 
 
-
 def load_data(dir, classification = False):
     data_train0, label_train0, Seglabel_train0  = load_h5(dir + 'ply_data_train0.h5')
     data_train1, label_train1, Seglabel_train1 = load_h5(dir + 'ply_data_train1.h5')

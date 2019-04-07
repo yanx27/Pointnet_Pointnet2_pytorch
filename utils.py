@@ -31,8 +31,8 @@ def show_example(x, y, x_reconstruction, y_pred,save_dir, figname):
     ax[1].set_title('Output: %d' % y_pred)
     plt.savefig(save_dir + figname + '.png')
 
-def save_checkpoint(epoch, train_accuracy, test_accuracy, model, optimizer, path):
-    savepath  = path + '/checkpoint-%f-%04d.pth' % (test_accuracy, epoch)
+def save_checkpoint(epoch, train_accuracy, test_accuracy, model, optimizer, path,modelnet='checkpoint'):
+    savepath  = path + '/%s-%f-%04d.pth' % (modelnet,test_accuracy, epoch)
     state = {
         'epoch': epoch,
         'train_accuracy': train_accuracy,
@@ -43,21 +43,18 @@ def save_checkpoint(epoch, train_accuracy, test_accuracy, model, optimizer, path
     torch.save(state, savepath)
 
 def test(model, loader):
-    metrics = defaultdict(lambda:list())
-    hist_acc = []
-    for batch_id, (x, y) in tqdm(enumerate(loader), total=len(loader),smoothing=0.9):
-        x = x.float().cuda()
-        y = y.long().cuda()
-        x = x.permute(0,2,1)
-        y_pred = model(x)
-
-        _, y_pred = torch.max(y_pred, -1)
-        pred_choice = y_pred.data.max(1)[1]
-        correct = pred_choice.eq(y.data).cpu().sum()
-        metrics['accuracy'].append(correct.data)
-    hist_acc.append(np.mean(metrics['accuracy']))
-    metrics['accuracy'] = np.mean(metrics['accuracy'])
-    return metrics, hist_acc
+    mean_correct = []
+    for j, data in enumerate(loader, 0):
+        points, target = data
+        target = target[:, 0]
+        points = points.transpose(2, 1)
+        points, target = points.cuda(), target.cuda()
+        classifier = model.eval()
+        pred, _ = classifier(points)
+        pred_choice = pred.data.max(1)[1]
+        correct = pred_choice.eq(target.long().data).cpu().sum()
+        mean_correct.append(correct.item()/float(points.size()[0]))
+    return np.mean(mean_correct)
 
 def compute_iou(pred,target,iou_tabel=None):
     ious = []
@@ -75,7 +72,7 @@ def compute_iou(pred,target,iou_tabel=None):
             iou_tabel[cat,1] += 1
     return np.mean(ious), iou_tabel
 
-def test_seg(model, loader, catdict, num_classes = 50):
+def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
     ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
     iou_tabel = np.zeros((len(catdict),3))
     metrics = defaultdict(lambda:list())
@@ -85,7 +82,10 @@ def test_seg(model, loader, catdict, num_classes = 50):
         points, target = Variable(points.float()), Variable(target.long())
         points = points.transpose(2, 1)
         points, target = points.cuda(), target.cuda()
-        pred, _ = model(points)
+        if pointnet2forseg:
+            pred, _ = model(points[:, :3, :], points[:, 3:, :])
+        else:
+            pred, _ = model(points)
         # print(pred.size())
         mean_iou, iou_tabel = compute_iou(pred,target,iou_tabel)
         pred = pred.contiguous().view(-1, num_classes)
