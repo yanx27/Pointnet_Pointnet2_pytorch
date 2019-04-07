@@ -12,9 +12,9 @@
 
 ### Training for Part Segmentation
 #### PointNet
-* python train_seg.py --model_name pointnet
+* python train_partseg.py --model_name pointnet
 #### PointNet++
-* python train_seg.py --model_name pointnet2
+* python train_partseg.py --model_name pointnet2
 
 ### Training for Sematic Segmentation
 #### PointNet
