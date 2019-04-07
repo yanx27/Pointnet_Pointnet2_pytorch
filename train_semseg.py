@@ -138,7 +138,7 @@ def main(args):
             step += 1
             adjust_learning_rate(optimizer, step)
 
-        test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat)
+        test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat,num_classes = 13)
         mean_iou = np.mean(cat_mean_iou)
         print('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],mean_iou))
