@@ -1,4 +1,4 @@
-# Pytorch Reproduction of PointNet and PointNet++ 
+# Pytorch Implementation of PointNet and PointNet++ 
 
 ### Data Preparation
 * Download **ModelNet** [here](http://modelnet.cs.princeton.edu/ModelNet40.zip) for classification and **ShapeNet** [here](https://www.shapenet.org/) for part segmentation. Put them respectively in `./data/ModelNet` and `./data/ShapeNet`.
