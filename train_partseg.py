@@ -13,7 +13,7 @@ from pathlib import Path
 from utils import test_seg
 from tqdm import tqdm
 from model.pointnet2 import PointNet2PartSeg
-from model.pointnet import PointNetPartSeg, feature_transform_reguliarzer
+from model.pointnet import PointNetSeg, feature_transform_reguliarzer
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27], 'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 seg_label_to_cat = {} # {0:Airplane, 1:Airplane, ...49:Table}
@@ -57,7 +57,7 @@ def main(args):
     logger = logging.getLogger(args.model_name)
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(str(log_dir) + '/train_%s.txt'%args.model_name)
+    file_handler = logging.FileHandler(str(log_dir) + '/train_%s_partseg.txt'%args.model_name)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -81,7 +81,7 @@ def main(args):
 
     num_classes = 50
     blue = lambda x: '\033[94m' + x + '\033[0m'
-    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetPartSeg(num_classes,feature_transform=True)
+    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetSeg(num_classes,feature_transform=True)
 
     if args.pretrain is not None:
         model.load_state_dict(torch.load(args.pretrain))
