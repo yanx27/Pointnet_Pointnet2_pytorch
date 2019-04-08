@@ -36,27 +36,45 @@ def load_data(dir, classification = False):
 
 
 class ShapeNetDataLoader(Dataset):
-    def __init__(self, data, labels, npoints=1024, data_augmentation=True):
+    def __init__(self, data, labels, npoints=1024, data_augmentation=True,normalize = False):
         self.data = data
         self.labels = labels
         self.npoints = npoints
         self.data_augmentation = data_augmentation
+        self.normalize = normalize
 
     def __len__(self):
         return len(self.data)
+
+    def pc_augment_to_point_num(self, pts, pn):
+        assert (pts.shape[0] <= pn)
+        cur_len = pts.shape[0]
+        res = np.array(pts)
+        while cur_len < pn:
+            res = np.concatenate((res, pts))
+            cur_len += pts.shape[0]
+        return res[:pn]
 
     def __getitem__(self, index):
         point_set = self.data[index]
         seg = self.labels[index]
         #print(point_set.shape, seg.shape)
 
-        choice = np.random.choice(len(seg), self.npoints, replace=True)
-        #resample
-        point_set = point_set[choice, :]
-
-        point_set = point_set - np.expand_dims(np.mean(point_set, axis = 0), 0) # center
-        dist = np.max(np.sqrt(np.sum(point_set ** 2, axis = 1)),0)
-        point_set = point_set / dist #scale
+        if self.npoints<=point_set.shape[0]:
+            choice = np.random.choice(len(seg), self.npoints, replace=True) #resample
+            point_set = point_set[choice, :]
+            seg = seg[choice]
+            if self.normalize:
+                point_set = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
+                dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
+                point_set = point_set / dist  # scale
+        else:
+            if self.normalize:
+                point_set = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
+                dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
+                point_set = point_set / dist  # scale
+            point_set = self.pc_augment_to_point_num(point_set,self.npoints)
+            seg = self.pc_augment_to_point_num(seg,self.npoints)
 
         if self.data_augmentation:
             theta = np.random.uniform(0,np.pi*2)
@@ -64,7 +82,6 @@ class ShapeNetDataLoader(Dataset):
             point_set[:,[0,2]] = point_set[:,[0,2]].dot(rotation_matrix) # random rotation
             point_set += np.random.normal(0, 0.02, size=point_set.shape) # random jitter
 
-        seg = seg[choice]
         point_set = torch.from_numpy(point_set)
         seg = torch.from_numpy(seg)
         return point_set, seg
