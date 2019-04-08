@@ -2,7 +2,7 @@
 
 ### Data Preparation
 * Download **ModelNet** [here](http://modelnet.cs.princeton.edu/ModelNet40.zip) for classification and **ShapeNet** [here](https://www.shapenet.org/) for part segmentation. Putting them respectively in `./data/ModelNet` and `./data/ShapeNet`.
-* Run `download_data.sh` for **S3DIS** sematic segmantation and save it in `./data/indoor3d_sem_seg_hdf5_data/`
+* Run `download_data.sh`  and download prepared **S3DIS** dataset for sematic segmantation and save it in `./data/indoor3d_sem_seg_hdf5_data/`
 
 ### Training for Classification
 #### PointNet
@@ -12,9 +12,9 @@
 
 ### Training for Part Segmentation
 #### PointNet
-* python train_seg.py --model_name pointnet
+* python train_partseg.py --model_name pointnet
 #### PointNet++
-* python train_seg.py --model_name pointnet2
+* python train_partseg.py --model_name pointnet2
 
 ### Training for Sematic Segmentation
 #### PointNet
