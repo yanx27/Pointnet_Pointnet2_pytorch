@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from data_utils.ShapeNetDataLoader import ShapeNetDataLoader, load_data
 import torch.nn.functional as F
 import datetime
+import numpy as np
 import logging
 from pathlib import Path
 from utils import test_seg
@@ -30,13 +31,13 @@ def parse_args():
     parser.add_argument('--epoch', type=int, default=201, help='number of epochs for training')
     parser.add_argument('--pretrain', type=str, default=None,help='whether use pretrain model')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--rotation',  default=None,help='range of training rotation')
     parser.add_argument('--model_name', type=str, default='pointnet2', help='Name of model')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate for training')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
     parser.add_argument('--feature_transform', default=False, help="use feature transform in pointnet")
+    parser.add_argument('--data_augmentation', default=False, help="data augmentation")
 
     return parser.parse_args()
 
@@ -69,13 +70,12 @@ def main(args):
     train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
     logger.info("The number of training data is: %d",train_data.shape[0])
     logger.info("The number of test data is: %d", test_data.shape[0])
-    ROTATION = (int(args.rotation[0:2]), int(args.rotation[3:5])) if args.rotation is not None else None
 
-    dataset = ShapeNetDataLoader(train_data,train_label,rotation=ROTATION)
+    dataset = ShapeNetDataLoader(train_data,train_label,data_augmentation=args.data_augmentation)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
                                              shuffle=True, num_workers=int(args.workers))
 
-    test_dataset = ShapeNetDataLoader(test_data,test_label)
+    test_dataset = ShapeNetDataLoader(test_data,test_label,data_augmentation=False)
     testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize,
                                                  shuffle=True, num_workers=int(args.workers))
 
