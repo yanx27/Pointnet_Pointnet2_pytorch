@@ -8,12 +8,13 @@ from torch.autograd import Variable
 from data_utils.ShapeNetDataLoader import ShapeNetDataLoader, load_data
 import torch.nn.functional as F
 import datetime
+import numpy as np
 import logging
 from pathlib import Path
 from utils import test_seg
 from tqdm import tqdm
 from model.pointnet2 import PointNet2PartSeg
-from model.pointnet import PointNetSeg, feature_transform_reguliarzer
+from model.pointnet import PointNetDenseCls, feature_transform_reguliarzer
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27], 'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 seg_label_to_cat = {} # {0:Airplane, 1:Airplane, ...49:Table}
@@ -30,13 +31,13 @@ def parse_args():
     parser.add_argument('--epoch', type=int, default=201, help='number of epochs for training')
     parser.add_argument('--pretrain', type=str, default=None,help='whether use pretrain model')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--rotation',  default=None,help='range of training rotation')
     parser.add_argument('--model_name', type=str, default='pointnet2', help='Name of model')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate for training')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
     parser.add_argument('--feature_transform', default=False, help="use feature transform in pointnet")
+    parser.add_argument('--data_augmentation', default=False, help="data augmentation")
 
     return parser.parse_args()
 
@@ -67,21 +68,22 @@ def main(args):
     DATA_PATH = './data/ShapeNet/'
     print('Load data from %s'%DATA_PATH)
     train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
+    print("The shape of training data is: ",train_data.shape)
     logger.info("The number of training data is: %d",train_data.shape[0])
+    print("The shape of test data is: ", test_data.shape)
     logger.info("The number of test data is: %d", test_data.shape[0])
-    ROTATION = (int(args.rotation[0:2]), int(args.rotation[3:5])) if args.rotation is not None else None
 
-    dataset = ShapeNetDataLoader(train_data,train_label,rotation=ROTATION)
+    dataset = ShapeNetDataLoader(train_data,train_label,npoints=2048,data_augmentation=args.data_augmentation)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
                                              shuffle=True, num_workers=int(args.workers))
 
-    test_dataset = ShapeNetDataLoader(test_data,test_label)
+    test_dataset = ShapeNetDataLoader(test_data,test_label,npoints=3000,data_augmentation=False,normalize=True)
     testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize,
                                                  shuffle=True, num_workers=int(args.workers))
 
     num_classes = 50
     blue = lambda x: '\033[94m' + x + '\033[0m'
-    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetSeg(num_classes,feature_transform=True)
+    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetDenseCls(num_classes,feature_transform=True)
 
     if args.pretrain is not None:
         model.load_state_dict(torch.load(args.pretrain))
@@ -93,9 +95,9 @@ def main(args):
     pretrain = args.pretrain
     init_epoch = int(pretrain[-14:-11]) if args.pretrain is not None else 0
 
-    def adjust_learning_rate(optimizer, step):
+    def adjust_learning_rate(optimizer, epoch):
         """Sets the learning rate to the initial LR decayed by 30 every 20000 steps"""
-        lr = args.learning_rate * (0.3 ** (step // 20000))
+        lr = args.learning_rate * (0.5 ** (epoch // 20))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
@@ -122,7 +124,6 @@ def main(args):
     history = defaultdict(lambda: list())
     best_acc = 0
     best_meaniou = 0
-    step = 0
 
     for epoch in range(init_epoch,args.epoch):
         for i, data in tqdm(enumerate(dataloader, 0),total=len(dataloader),smoothing=0.9):
@@ -141,13 +142,13 @@ def main(args):
             history['loss'].append(loss.cpu().data.numpy())
             loss.backward()
             optimizer.step()
-            step += 1
-            adjust_learning_rate(optimizer, step)
+            adjust_learning_rate(optimizer, epoch)
 
         test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat)
 
         print('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],test_metrics['iou']))
+        print('Learning rate:%f'%optimizer.param_groups[0]['lr'])
         logger.info('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, 'test', test_metrics['accuracy'],test_metrics['iou']))
         if test_metrics['accuracy'] > best_acc:

@@ -56,7 +56,7 @@ def test(model, loader):
         mean_correct.append(correct.item()/float(points.size()[0]))
     return np.mean(mean_correct)
 
-def compute_iou(pred,target,iou_tabel=None):
+def compute_cat_iou(pred,target,iou_tabel=None):
     ious = []
     target = target.cpu().data.numpy()
     for j in range(pred.size(0)):
@@ -66,17 +66,35 @@ def compute_iou(pred,target,iou_tabel=None):
         for cat in np.unique(batch_target):
             intersection = np.sum((batch_target == cat) & (batch_choice == cat))
             union = float(np.sum((batch_target == cat) | (batch_choice == cat)))
-            iou = intersection/union
+            iou = intersection/union if not union ==0 else 1
             ious.append(iou)
             iou_tabel[cat,0] += iou
             iou_tabel[cat,1] += 1
     return np.mean(ious), iou_tabel
+
+def compute_overall_iou(pred, target, num_classes):
+    shape_ious = []
+    pred_np = pred.cpu().data.numpy()
+    target_np = target.cpu().data.numpy()
+    for shape_idx in range(pred.size(0)):
+        part_ious = []
+        for part in range(num_classes):
+            I = np.sum(np.logical_and(pred_np[shape_idx].max(1) == part, target_np[shape_idx] == part))
+            U = np.sum(np.logical_or(pred_np[shape_idx].max(1) == part, target_np[shape_idx] == part))
+            if U == 0:
+                iou = 1 #If the union of groundtruth and prediction points is empty, then count part IoU as 1
+            else:
+                iou = I / float(U)
+            part_ious.append(iou)
+        shape_ious.append(np.mean(part_ious))
+    return shape_ious
 
 def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
     ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
     iou_tabel = np.zeros((len(catdict),3))
     metrics = defaultdict(lambda:list())
     hist_acc = []
+    shape_ious = []
     for batch_id, (points, target) in tqdm(enumerate(loader), total=len(loader), smoothing=0.9):
         batchsize, num_point, _ = points.size()
         points, target = Variable(points.float()), Variable(target.long())
@@ -87,22 +105,24 @@ def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
         else:
             pred, _ = model(points)
         # print(pred.size())
-        mean_iou, iou_tabel = compute_iou(pred,target,iou_tabel)
+        meanious, iou_tabel = compute_cat_iou(pred,target,iou_tabel)
+        shape_ious.append(meanious)
+        # shape_ious += compute_overall_iou(pred, target, num_classes)
         pred = pred.contiguous().view(-1, num_classes)
         target = target.view(-1, 1)[:, 0]
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
         metrics['accuracy'].append(correct.item()/ (batchsize * num_point))
-        metrics['iou'].append(mean_iou)
     iou_tabel[:,2] = iou_tabel[:,0] /iou_tabel[:,1]
     hist_acc += metrics['accuracy']
     metrics['accuracy'] = np.mean(metrics['accuracy'])
-    metrics['iou'] = np.mean(metrics['iou'])
     iou_tabel = pd.DataFrame(iou_tabel,columns=['iou','count','mean_iou'])
     iou_tabel['Category_IOU'] = [cat_value for cat_value in catdict.values()]
     cat_iou = iou_tabel.groupby('Category_IOU')['mean_iou'].mean()
+    metrics['iou'] = np.mean(shape_ious)
 
     return metrics, hist_acc, cat_iou
+
 
 def compute_avg_curve(y, n_points_avg):
     avg_kernel = np.ones((n_points_avg,)) / n_points_avg
