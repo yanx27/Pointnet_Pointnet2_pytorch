@@ -68,16 +68,16 @@ def main(args):
     DATA_PATH = './data/ShapeNet/'
     print('Load data from %s'%DATA_PATH)
     train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
-    print("The number of training data is: %d"%train_data.shape[0])
+    print("The shape of training data is: ",train_data.shape)
     logger.info("The number of training data is: %d",train_data.shape[0])
-    print("The number of test data is: %d", test_data.shape[0])
-    logger.info("The number of test data is: %d"%test_data.shape[0])
+    print("The shape of test data is: ", test_data.shape)
+    logger.info("The number of test data is: %d", test_data.shape[0])
 
-    dataset = ShapeNetDataLoader(train_data,train_label,data_augmentation=args.data_augmentation)
+    dataset = ShapeNetDataLoader(train_data,train_label,npoints=2048,data_augmentation=args.data_augmentation)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
                                              shuffle=True, num_workers=int(args.workers))
 
-    test_dataset = ShapeNetDataLoader(test_data,test_label,data_augmentation=False)
+    test_dataset = ShapeNetDataLoader(test_data,test_label,npoints=3000,data_augmentation=False,normalize=True)
     testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize,
                                                  shuffle=True, num_workers=int(args.workers))
 
@@ -95,9 +95,9 @@ def main(args):
     pretrain = args.pretrain
     init_epoch = int(pretrain[-14:-11]) if args.pretrain is not None else 0
 
-    def adjust_learning_rate(optimizer, step):
+    def adjust_learning_rate(optimizer, epoch):
         """Sets the learning rate to the initial LR decayed by 30 every 20000 steps"""
-        lr = args.learning_rate * (0.3 ** (step // 20000))
+        lr = args.learning_rate * (0.5 ** (epoch // 20))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
@@ -124,7 +124,6 @@ def main(args):
     history = defaultdict(lambda: list())
     best_acc = 0
     best_meaniou = 0
-    step = 0
 
     for epoch in range(init_epoch,args.epoch):
         for i, data in tqdm(enumerate(dataloader, 0),total=len(dataloader),smoothing=0.9):
@@ -143,13 +142,13 @@ def main(args):
             history['loss'].append(loss.cpu().data.numpy())
             loss.backward()
             optimizer.step()
-            step += 1
-            adjust_learning_rate(optimizer, step)
+            adjust_learning_rate(optimizer, epoch)
 
         test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat)
 
         print('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],test_metrics['iou']))
+        print('Learning rate:%f'%optimizer.param_groups[0]['lr'])
         logger.info('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, 'test', test_metrics['accuracy'],test_metrics['iou']))
         if test_metrics['accuracy'] > best_acc:
