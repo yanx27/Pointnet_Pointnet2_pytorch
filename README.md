@@ -17,8 +17,8 @@
 | PointNet++ (Original) | **91.9** |
 | PointNet++ (Pytorch) | 91.8 |
 
-* Train Pointnet with 0.001 learning rate in SGD, 24 batchsize and 141 epoch can gain results above.
-* Train Pointnet++ with 0.001 learning rate in SGD, 12 batchsize and 45 epoch can gain results above.
+* Train Pointnet with 0.001 learning rate in SGD, 24 batchsize and 141 epochs can gain the results above.
+* Train Pointnet++ with 0.001 learning rate in SGD, 12 batchsize and 45 epochs can gain the results above.
 
 ## Training for Part Segmentation
 ### PointNet
