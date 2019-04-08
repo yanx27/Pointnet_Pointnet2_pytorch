@@ -9,6 +9,13 @@
 * python train_clf.py --model_name pointnet 
 #### PointNet++
 * python train_clf.py --model_name pointnet2 
+#### Performance
+| Model | Accuracy |
+|--|--|
+| PointNet (original) |  89.2|
+| PointNet++ (original) | 91.9 |
+| PointNet (pytorch) |  89.4|
+| PointNet++ (pytorch) | 91.8 |
 
 ### Training for Part Segmentation
 #### PointNet
