@@ -1,6 +1,7 @@
 # *_*coding:utf-8 *_*
 import numpy as np
 import h5py
+import torch
 import warnings
 from torch.utils.data import Dataset
 warnings.filterwarnings('ignore')
@@ -11,7 +12,6 @@ def load_h5(h5_filename):
     label = f['label'][:]
     seg = f['pid'][:]
     return (data, label, seg)
-
 
 def load_data(dir, classification = False):
     data_train0, label_train0, Seglabel_train0  = load_h5(dir + 'ply_data_train0.h5')
@@ -35,47 +35,39 @@ def load_data(dir, classification = False):
         return train_data, train_Seglabel, test_data, test_Seglabel
 
 
-
 class ShapeNetDataLoader(Dataset):
-    def __init__(self, data, labels, rotation=None):
+    def __init__(self, data, labels, npoints=1024, data_augmentation=True):
         self.data = data
         self.labels = labels
-        self.rotation = rotation
+        self.npoints = npoints
+        self.data_augmentation = data_augmentation
 
     def __len__(self):
         return len(self.data)
 
-    def pc_normalize(self, pc):
-        centroid = np.mean(pc, axis=0)
-        pc = pc - centroid
-        m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
-        pc = pc / m
-        return pc
-
-    def rotate_point_cloud_by_angle(self, data, rotation_angle):
-        """
-        Rotate the point cloud along up direction with certain angle.
-        :param batch_data: Nx3 array, original batch of point clouds
-        :param rotation_angle: range of rotation
-        :return:  Nx3 array, rotated batch of point clouds
-        """
-        cosval = np.cos(rotation_angle)
-        sinval = np.sin(rotation_angle)
-        rotation_matrix = np.array([[cosval, 0, sinval],
-                                    [0, 1, 0],
-                                    [-sinval, 0, cosval]])
-        rotated_data = np.dot(data, rotation_matrix)
-
-        return rotated_data
-
     def __getitem__(self, index):
-        if self.rotation is not None:
-            pointcloud = self.pc_normalize(self.data[index])
-            angle = np.random.randint(self.rotation[0], self.rotation[1]) * np.pi / 180
-            pointcloud = self.rotate_point_cloud_by_angle(pointcloud, angle)
+        point_set = self.data[index]
+        seg = self.labels[index]
+        #print(point_set.shape, seg.shape)
 
-            return pointcloud, self.labels[index]
-        else:
-            return self.pc_normalize(self.data[index]), self.labels[index]
+        choice = np.random.choice(len(seg), self.npoints, replace=True)
+        #resample
+        point_set = point_set[choice, :]
+
+        point_set = point_set - np.expand_dims(np.mean(point_set, axis = 0), 0) # center
+        dist = np.max(np.sqrt(np.sum(point_set ** 2, axis = 1)),0)
+        point_set = point_set / dist #scale
+
+        if self.data_augmentation:
+            theta = np.random.uniform(0,np.pi*2)
+            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+            point_set[:,[0,2]] = point_set[:,[0,2]].dot(rotation_matrix) # random rotation
+            point_set += np.random.normal(0, 0.02, size=point_set.shape) # random jitter
+
+        seg = seg[choice]
+        point_set = torch.from_numpy(point_set)
+        seg = torch.from_numpy(seg)
+        return point_set, seg
+
 
 
