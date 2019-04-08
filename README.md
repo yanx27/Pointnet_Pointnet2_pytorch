@@ -12,9 +12,9 @@
 ### Performance
 | Model | Accuracy |
 |--|--|
-| PointNet (Original) |  89.2|
+| PointNet (Official) |  89.2|
 | PointNet (Pytorch) |  **89.4**|
-| PointNet++ (Original) | **91.9** |
+| PointNet++ (Official) | **91.9** |
 | PointNet++ (Pytorch) | 91.8 |
 
 * Train Pointnet with 0.001 learning rate in SGD, 24 batchsize and 141 epochs can gain the results above.
