@@ -14,7 +14,7 @@ from pathlib import Path
 from utils import test_seg
 from tqdm import tqdm
 from model.pointnet2 import PointNet2PartSeg
-from model.pointnet import PointNetSeg, feature_transform_reguliarzer
+from model.pointnet import PointNetDenseCls, feature_transform_reguliarzer
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27], 'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 seg_label_to_cat = {} # {0:Airplane, 1:Airplane, ...49:Table}
@@ -68,8 +68,10 @@ def main(args):
     DATA_PATH = './data/ShapeNet/'
     print('Load data from %s'%DATA_PATH)
     train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
+    print("The number of training data is: %d"%train_data.shape[0])
     logger.info("The number of training data is: %d",train_data.shape[0])
-    logger.info("The number of test data is: %d", test_data.shape[0])
+    print("The number of test data is: %d", test_data.shape[0])
+    logger.info("The number of test data is: %d"%test_data.shape[0])
 
     dataset = ShapeNetDataLoader(train_data,train_label,data_augmentation=args.data_augmentation)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
@@ -81,7 +83,7 @@ def main(args):
 
     num_classes = 50
     blue = lambda x: '\033[94m' + x + '\033[0m'
-    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetSeg(num_classes,feature_transform=True)
+    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetDenseCls(num_classes,feature_transform=True)
 
     if args.pretrain is not None:
         model.load_state_dict(torch.load(args.pretrain))
