@@ -56,21 +56,25 @@ def test(model, loader):
         mean_correct.append(correct.item()/float(points.size()[0]))
     return np.mean(mean_correct)
 
-def compute_cat_iou(pred,target,iou_tabel=None):
-    ious = []
+def compute_cat_iou(pred,target,iou_tabel):
     target = target.cpu().data.numpy()
     for j in range(pred.size(0)):
         batch_pred = pred[j]
         batch_target = target[j]
         batch_choice = batch_pred.data.max(1)[1].cpu().data.numpy()
         for cat in np.unique(batch_target):
-            intersection = np.sum((batch_target == cat) & (batch_choice == cat))
-            union = float(np.sum((batch_target == cat) | (batch_choice == cat)))
-            iou = intersection/union if not union ==0 else 1
-            ious.append(iou)
+            # intersection = np.sum((batch_target == cat) & (batch_choice == cat))
+            # union = float(np.sum((batch_target == cat) | (batch_choice == cat)))
+            # iou = intersection/union if not union ==0 else 1
+            I = np.sum(np.logical_and(batch_choice == cat, batch_target == cat))
+            U = np.sum(np.logical_or(batch_choice == cat, batch_target == cat))
+            if U == 0:
+                iou = 1  # If the union of groundtruth and prediction points is empty, then count part IoU as 1
+            else:
+                iou = I / float(U)
             iou_tabel[cat,0] += iou
             iou_tabel[cat,1] += 1
-    return np.mean(ious), iou_tabel
+    return iou_tabel
 
 def compute_overall_iou(pred, target, num_classes):
     shape_ious = []
@@ -89,12 +93,49 @@ def compute_overall_iou(pred, target, num_classes):
         shape_ious.append(np.mean(part_ious))
     return shape_ious
 
+def test_partseg(model, loader, catdict, num_classes = 50,forpointnet2=False):
+    ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
+    iou_tabel = np.zeros((len(catdict),3))
+    metrics = defaultdict(lambda:list())
+    hist_acc = []
+    # mean_correct = []
+    for batch_id, (points, label, target, norm_plt) in tqdm(enumerate(loader), total=len(loader), smoothing=0.9):
+        batchsize, num_point,_= points.size()
+        points, label, target, norm_plt = Variable(points.float()),Variable(label.long()), Variable(target.long()),Variable(norm_plt.float())
+        points = points.transpose(2, 1)
+        norm_plt = norm_plt.transpose(2, 1)
+        points, label, target, norm_plt = points.cuda(), label.squeeze().cuda(), target.cuda(), norm_plt.cuda()
+        if forpointnet2:
+            seg_pred = model(points, norm_plt, to_categorical(label, 16))
+        else:
+            labels_pred, seg_pred, _  = model(points,to_categorical(label,16))
+            # labels_pred_choice = labels_pred.data.max(1)[1]
+            # labels_correct = labels_pred_choice.eq(label.long().data).cpu().sum()
+            # mean_correct.append(labels_correct.item() / float(points.size()[0]))
+        # print(pred.size())
+        iou_tabel = compute_cat_iou(seg_pred,target,iou_tabel)
+        # shape_ious += compute_overall_iou(pred, target, num_classes)
+        seg_pred = seg_pred.contiguous().view(-1, num_classes)
+        target = target.view(-1, 1)[:, 0]
+        pred_choice = seg_pred.data.max(1)[1]
+        correct = pred_choice.eq(target.data).cpu().sum()
+        metrics['accuracy'].append(correct.item()/ (batchsize * num_point))
+    iou_tabel[:,2] = iou_tabel[:,0] /iou_tabel[:,1]
+    hist_acc += metrics['accuracy']
+    metrics['accuracy'] = np.mean(metrics['accuracy'])
+    metrics['iou'] = np.mean(iou_tabel[:, 2])
+    # metrics['label_accuracy'] = np.mean(mean_correct)
+    iou_tabel = pd.DataFrame(iou_tabel,columns=['iou','count','mean_iou'])
+    iou_tabel['Category_IOU'] = [catdict[i] for i in range(len(catdict)) ]
+    cat_iou = iou_tabel.groupby('Category_IOU')['mean_iou'].mean()
+
+    return metrics, hist_acc, cat_iou
+
 def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
     ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
     iou_tabel = np.zeros((len(catdict),3))
     metrics = defaultdict(lambda:list())
     hist_acc = []
-    shape_ious = []
     for batch_id, (points, target) in tqdm(enumerate(loader), total=len(loader), smoothing=0.9):
         batchsize, num_point, _ = points.size()
         points, target = Variable(points.float()), Variable(target.long())
@@ -105,8 +146,7 @@ def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
         else:
             pred, _ = model(points)
         # print(pred.size())
-        meanious, iou_tabel = compute_cat_iou(pred,target,iou_tabel)
-        shape_ious.append(meanious)
+        iou_tabel = compute_cat_iou(pred,target,iou_tabel)
         # shape_ious += compute_overall_iou(pred, target, num_classes)
         pred = pred.contiguous().view(-1, num_classes)
         target = target.view(-1, 1)[:, 0]
@@ -116,10 +156,11 @@ def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
     iou_tabel[:,2] = iou_tabel[:,0] /iou_tabel[:,1]
     hist_acc += metrics['accuracy']
     metrics['accuracy'] = np.mean(metrics['accuracy'])
+    metrics['iou'] = np.mean(iou_tabel[:, 2])
     iou_tabel = pd.DataFrame(iou_tabel,columns=['iou','count','mean_iou'])
-    iou_tabel['Category_IOU'] = [cat_value for cat_value in catdict.values()]
+    iou_tabel['Category_IOU'] = [catdict[i] for i in range(len(catdict)) ]
+    print(iou_tabel)
     cat_iou = iou_tabel.groupby('Category_IOU')['mean_iou'].mean()
-    metrics['iou'] = np.mean(shape_ious)
 
     return metrics, hist_acc, cat_iou
 
