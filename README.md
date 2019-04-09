@@ -31,6 +31,11 @@
 * python train_semseg.py --model_name pointnet
 ### PointNet++
 * python train_semseg.py --model_name pointnet2
+### Performance
+|Model  | Mean IOU | ceiling | floor | wall | beam | column | window | door |  chair| tabel| bookcase| sofa | board | clutter | 
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+| PointNet (Official) | 41.09|	88.8	|97.33|	69.8|	0.05|	3.92	|46.26|	10.76	|52.61	|58.93	|40.28|	5.85	|26.38	|33.22 |
+| PointNet (Pytorch) | 44.43	|91.1	|96.8	|72.1	|5.82|	14.7	|36.03	|37.1	|49.36	|50.17	|35.99	|14.26	|33.9	|40.23 |
 
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)
