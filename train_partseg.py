@@ -121,7 +121,8 @@ def main(args):
 
     history = defaultdict(lambda: list())
     best_acc = 0
-    best_meaniou = 0
+    best_class_avg_iou = 0
+    best_inctance_avg_iou = 0
 
     for epoch in range(init_epoch,args.epoch):
         scheduler.step()
@@ -155,11 +156,11 @@ def main(args):
         forpointnet2 = args.model_name == 'pointnet2'
         test_metrics, test_hist_acc, cat_mean_iou = test_partseg(model, testdataloader, seg_label_to_cat,50,forpointnet2)
 
-        print('Epoch %d %s accuracy: %f  meanIOU: %f' % (
-                 epoch, blue('test'), test_metrics['accuracy'],test_metrics['iou']))
+        print('Epoch %d %s accuracy: %f  Class avg mIOU: %f   Inctance avg mIOU: %f' % (
+                 epoch, blue('test'), test_metrics['accuracy'],test_metrics['class_avg_iou'],test_metrics['inctance_avg_iou']))
 
-        logger.info('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
-                 epoch, 'test', test_metrics['accuracy'],test_metrics['iou']))
+        logger.info('Epoch %d %s accuracy: %f  Class avg mIOU: %f   Inctance avg mIOU: %f' % (
+                 epoch, blue('test'), test_metrics['accuracy'],test_metrics['class_avg_iou'],test_metrics['inctance_avg_iou']))
         if test_metrics['accuracy'] > best_acc:
             best_acc = test_metrics['accuracy']
             torch.save(model.state_dict(), '%s/%s_%.3d_%.4f.pth' % (checkpoints_dir,args.model_name, epoch, best_acc))
@@ -167,12 +168,16 @@ def main(args):
             logger.info('Save model..')
             print('Save model..')
             print(cat_mean_iou)
-        if test_metrics['iou'] > best_meaniou:
-            best_meaniou = test_metrics['iou']
+        if test_metrics['class_avg_iou'] > best_class_avg_iou:
+            best_class_avg_iou = test_metrics['class_avg_iou']
+        if test_metrics['inctance_avg_iou'] > best_inctance_avg_iou:
+            best_inctance_avg_iou = test_metrics['inctance_avg_iou']
         print('Best accuracy is: %.5f'%best_acc)
         logger.info('Best accuracy is: %.5f'%best_acc)
-        print('Best meanIOU is: %.5f'%best_meaniou)
-        logger.info('Best meanIOU is: %.5f'%best_meaniou)
+        print('Best class avg mIOU is: %.5f'%best_class_avg_iou)
+        logger.info('Best class avg mIOU is: %.5f'%best_class_avg_iou)
+        print('Best inctance avg mIOU is: %.5f'%best_inctance_avg_iou)
+        logger.info('Best inctance avg mIOU is: %.5f'%best_inctance_avg_iou)
 
 
 if __name__ == '__main__':
