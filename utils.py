@@ -57,6 +57,7 @@ def test(model, loader):
     return np.mean(mean_correct)
 
 def compute_cat_iou(pred,target,iou_tabel):
+    iou_list = []
     target = target.cpu().data.numpy()
     for j in range(pred.size(0)):
         batch_pred = pred[j]
@@ -74,7 +75,8 @@ def compute_cat_iou(pred,target,iou_tabel):
                 iou = I / float(U)
             iou_tabel[cat,0] += iou
             iou_tabel[cat,1] += 1
-    return iou_tabel
+            iou_list.append(iou)
+    return iou_tabel,iou_list
 
 def compute_overall_iou(pred, target, num_classes):
     shape_ious = []
@@ -96,6 +98,7 @@ def compute_overall_iou(pred, target, num_classes):
 def test_partseg(model, loader, catdict, num_classes = 50,forpointnet2=False):
     ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
     iou_tabel = np.zeros((len(catdict),3))
+    iou_list = []
     metrics = defaultdict(lambda:list())
     hist_acc = []
     # mean_correct = []
@@ -113,7 +116,8 @@ def test_partseg(model, loader, catdict, num_classes = 50,forpointnet2=False):
             # labels_correct = labels_pred_choice.eq(label.long().data).cpu().sum()
             # mean_correct.append(labels_correct.item() / float(points.size()[0]))
         # print(pred.size())
-        iou_tabel = compute_cat_iou(seg_pred,target,iou_tabel)
+        iou_tabel, iou = compute_cat_iou(seg_pred,target,iou_tabel)
+        iou_list+=iou
         # shape_ious += compute_overall_iou(pred, target, num_classes)
         seg_pred = seg_pred.contiguous().view(-1, num_classes)
         target = target.view(-1, 1)[:, 0]
@@ -122,12 +126,13 @@ def test_partseg(model, loader, catdict, num_classes = 50,forpointnet2=False):
         metrics['accuracy'].append(correct.item()/ (batchsize * num_point))
     iou_tabel[:,2] = iou_tabel[:,0] /iou_tabel[:,1]
     hist_acc += metrics['accuracy']
-    metrics['accuracy'] = np.mean(metrics['accuracy'])
-    metrics['iou'] = np.mean(iou_tabel[:, 2])
+    metrics['accuracy'] = np.mean(hist_acc)
+    metrics['inctance_avg_iou'] = np.mean(iou_list)
     # metrics['label_accuracy'] = np.mean(mean_correct)
     iou_tabel = pd.DataFrame(iou_tabel,columns=['iou','count','mean_iou'])
     iou_tabel['Category_IOU'] = [catdict[i] for i in range(len(catdict)) ]
     cat_iou = iou_tabel.groupby('Category_IOU')['mean_iou'].mean()
+    metrics['class_avg_iou'] = np.mean(cat_iou)
 
     return metrics, hist_acc, cat_iou
 
