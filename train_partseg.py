@@ -3,6 +3,7 @@ import os
 import torch
 import torch.nn.parallel
 import torch.utils.data
+from utils import to_categorical
 from collections import defaultdict
 from torch.autograd import Variable
 from data_utils.ShapeNetDataLoader import ShapeNetDataLoader, load_data
@@ -11,10 +12,10 @@ import datetime
 import numpy as np
 import logging
 from pathlib import Path
-from utils import test_seg
+from utils import test_partseg
 from tqdm import tqdm
-from model.pointnet2 import PointNet2PartSeg
-from model.pointnet import PointNetDenseCls, feature_transform_reguliarzer
+from model.pointnet2 import PointNet2PartSeg_msg_one_hot
+from model.pointnet import PointNetDenseCls,PointNetLoss
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27], 'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 seg_label_to_cat = {} # {0:Airplane, 1:Airplane, ...49:Table}
@@ -36,7 +37,6 @@ def parse_args():
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
-    parser.add_argument('--feature_transform', default=False, help="use feature transform in pointnet")
     parser.add_argument('--data_augmentation', default=False, help="data augmentation")
 
     return parser.parse_args()
@@ -67,23 +67,24 @@ def main(args):
     logger.info(args)
     DATA_PATH = './data/ShapeNet/'
     print('Load data from %s'%DATA_PATH)
-    train_data, train_label, test_data, test_label = load_data(DATA_PATH,classification = False)
+    train_data, train_label, train_seg_label, test_data, test_label, test_seg_label = load_data(DATA_PATH,classification = False)
     print("The shape of training data is: ",train_data.shape)
     logger.info("The number of training data is: %d",train_data.shape[0])
     print("The shape of test data is: ", test_data.shape)
     logger.info("The number of test data is: %d", test_data.shape[0])
 
-    dataset = ShapeNetDataLoader(train_data,train_label,npoints=2048,data_augmentation=args.data_augmentation)
+    dataset = ShapeNetDataLoader(train_data,train_label,train_seg_label, npoints=2048,data_augmentation=args.data_augmentation,normalize=True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
                                              shuffle=True, num_workers=int(args.workers))
 
-    test_dataset = ShapeNetDataLoader(test_data,test_label,npoints=3000,data_augmentation=False,normalize=True)
-    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize,
+    test_dataset = ShapeNetDataLoader(test_data,test_label,test_seg_label, npoints=2048,data_augmentation=False,normalize=True)
+    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=10,
                                                  shuffle=True, num_workers=int(args.workers))
 
-    num_classes = 50
+    num_classes = 16
+    num_part = 50
     blue = lambda x: '\033[94m' + x + '\033[0m'
-    model = PointNet2PartSeg(num_classes) if args.model_name == 'pointnet2'else PointNetDenseCls(num_classes,feature_transform=True)
+    model = PointNet2PartSeg_msg_one_hot(num_part) if args.model_name == 'pointnet2'else PointNetDenseCls(cat_num=num_classes,part_num=num_part)
 
     if args.pretrain is not None:
         model.load_state_dict(torch.load(args.pretrain))
@@ -95,11 +96,6 @@ def main(args):
     pretrain = args.pretrain
     init_epoch = int(pretrain[-14:-11]) if args.pretrain is not None else 0
 
-    def adjust_learning_rate(optimizer, epoch):
-        """Sets the learning rate to the initial LR decayed by 30 every 20000 steps"""
-        lr = args.learning_rate * (0.5 ** (epoch // 20))
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
 
     if args.optimizer == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
@@ -111,7 +107,7 @@ def main(args):
             eps=1e-08,
             weight_decay=args.decay_rate
         )
-
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
     '''GPU selection and multi-GPU'''
     if args.multi_gpu is not None:
         device_ids = [int(x) for x in args.multi_gpu.split(',')]
@@ -120,35 +116,48 @@ def main(args):
         model = torch.nn.DataParallel(model, device_ids=device_ids)
     else:
         model.cuda()
+    criterion = PointNetLoss()
+    LEARNING_RATE_CLIP = 1e-5
 
     history = defaultdict(lambda: list())
     best_acc = 0
     best_meaniou = 0
 
     for epoch in range(init_epoch,args.epoch):
+        scheduler.step()
+        lr = max(optimizer.param_groups[0]['lr'],LEARNING_RATE_CLIP)
+        print('Learning rate:%f' % lr)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
         for i, data in tqdm(enumerate(dataloader, 0),total=len(dataloader),smoothing=0.9):
-            points, target = data
-            points, target = Variable(points.float()), Variable(target.long())
+            points, label, target, norm_plt = data
+            points, label, target = Variable(points.float()),Variable(label.long()),  Variable(target.long())
             points = points.transpose(2, 1)
-            points, target = points.cuda(), target.cuda()
+            norm_plt = norm_plt.transpose(2, 1)
+            points, label, target,norm_plt = points.cuda(),label.squeeze().cuda(), target.cuda(), norm_plt.cuda()
             optimizer.zero_grad()
             model = model.train()
-            pred, trans_feat = model(points)
-            pred = pred.contiguous().view(-1, num_classes)
-            target = target.view(-1, 1)[:, 0]
-            loss = F.nll_loss(pred, target)
-            if args.feature_transform and args.model_name == 'pointnet':
-                loss += feature_transform_reguliarzer(trans_feat) * 0.001
+            if args.model_name == 'pointnet':
+                labels_pred, seg_pred, trans_feat = model(points, to_categorical(label, 16))
+                seg_pred = seg_pred.contiguous().view(-1, num_part)
+                target = target.view(-1, 1)[:, 0]
+                loss, seg_loss, label_loss = criterion(labels_pred, label, seg_pred, target, trans_feat)
+            else:
+                seg_pred = model(points, norm_plt, to_categorical(label, 16))
+                seg_pred = seg_pred.contiguous().view(-1, num_part)
+                target = target.view(-1, 1)[:, 0]
+                loss = F.nll_loss(seg_pred, target)
+
             history['loss'].append(loss.cpu().data.numpy())
             loss.backward()
             optimizer.step()
-            adjust_learning_rate(optimizer, epoch)
 
-        test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat)
+        forpointnet2 = args.model_name == 'pointnet2'
+        test_metrics, test_hist_acc, cat_mean_iou = test_partseg(model, testdataloader, seg_label_to_cat,50,forpointnet2)
 
-        print('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
+        print('Epoch %d %s accuracy: %f  meanIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],test_metrics['iou']))
-        print('Learning rate:%f'%optimizer.param_groups[0]['lr'])
+
         logger.info('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, 'test', test_metrics['accuracy'],test_metrics['iou']))
         if test_metrics['accuracy'] > best_acc:
