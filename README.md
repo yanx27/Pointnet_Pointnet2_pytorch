@@ -58,6 +58,7 @@
 `cd visualizer`<br>
 `bash build.sh #build C++ code for visualization`
 
+### Using pc_utils.py
 ![](/visualizer/example.jpg)
 
 ## TODO
