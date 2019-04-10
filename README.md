@@ -33,6 +33,7 @@
 |PointNet++ (Official)|**85.1**	|**81.9**	|82.4|79	|87.7	|77.3|	90.8|	71.8|	91|	85.9|	83.7|	95.3	|71.6|	94.1	|81.3|	58.7|	76.4|	82.6|
 |PointNet++ (Pytorch)|	83.4|	80.5	|82.6|	78.7|	82.3	|78.1|86.8|	63.8	|91.6|	88.9|	83.6	|96.8	|63.3	|95.7	|82.8|	55.7	|76.3	|71.1|
 
+* Train Pointnet and Pointnet++ with 0.001 learning rate in Adam, 16 batchsize and decay 0.5 learning rate every 20 epochs can gain the results above.
 * **Class avg** is the mean IoU averaged across all object categories, and **inctance avg** is the mean IoU across all objects.
 * We did not use data augmentation (norm and randomly jitter) so the results is relatively lower than the official version's.
   
