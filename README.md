@@ -65,12 +65,13 @@
 
 - [x] PointNet and PointNet++ 
 - [x] Experiment 
-- [ ] Visualization tool
+- [ ] Visualization Tool
 
 
 
 ## Reference By
-[halimacc/pointnet3](https://github.com/halimacc/pointnet3)
+[halimacc/pointnet3](https://github.com/halimacc/pointnet3)<br>
+[fxia22/pointnet.pytorch](https://github.com/fxia22/pointnet.pytorch)
 
 ## Links
 [Official PointNet](https://github.com/charlesq34/pointnet) and [Official PointNet++](https://github.com/charlesq34/pointnet2)
