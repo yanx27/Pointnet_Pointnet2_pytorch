@@ -57,8 +57,7 @@
 ### Using show3d_balls.py
 `cd visualizer`<br>
 `bash build.sh #build C++ code for visualization`
-![](/visualizer/example2.jpg)
-### Using pc_utils.py
+
 ![](/visualizer/example.jpg)
 
 ## TODO
