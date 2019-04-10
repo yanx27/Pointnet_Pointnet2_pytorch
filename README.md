@@ -54,9 +54,12 @@
 * Training Pointnet with 0.001 learning rate in Adam, 24 batchsize and 84 epochs.
 
 ## Visualization
-
+### Using show3d_balls.py
 `cd visualizer`<br>
 `bash build.sh #build C++ code for visualization`
+![](/visualizer/example2.jpg)
+### Using pc_utils.py
+![](/visualizer/example.jpg)
 
 ## TODO
 
