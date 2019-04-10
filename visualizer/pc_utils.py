@@ -16,7 +16,6 @@ from visualizer.eulerangles import euler2mat
 import numpy as np
 from visualizer.plyfile import PlyData, PlyElement
 
-
 # ----------------------------------------
 # Point Cloud/Volume Conversions
 # ----------------------------------------
