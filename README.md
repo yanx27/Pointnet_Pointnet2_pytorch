@@ -52,6 +52,15 @@
 | PointNet (Pytorch) | **44.43**|**91.1**|96.8|**72.1**|**5.82**|**14.7**|36.03|**37.1**|49.36|50.17|35.99|**14.26**|**33.9**|**40.23**|
 
 * Train Pointnet with 0.001 learning rate in Adam, 24 batchsize and 84 epochs can gain the results above.
+
+## TODO
+
+- [x] PointNet and PointNet++ 
+- [x] Experiment 
+- [ ] Visualization tool
+
+
+
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)
 
