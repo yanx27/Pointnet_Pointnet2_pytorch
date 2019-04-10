@@ -32,13 +32,14 @@ def load_data(dir, classification = False):
     if classification:
         return train_data, train_label, test_data, test_label
     else:
-        return train_data, train_Seglabel, test_data, test_Seglabel
+        return train_data,train_label,train_Seglabel, test_data,test_label, test_Seglabel
 
 
 class ShapeNetDataLoader(Dataset):
-    def __init__(self, data, labels, npoints=1024, data_augmentation=True,normalize = False):
+    def __init__(self, data, labels,seg_label, npoints=1024, data_augmentation=True,normalize = False):
         self.data = data
         self.labels = labels
+        self.seg_label = seg_label
         self.npoints = npoints
         self.data_augmentation = data_augmentation
         self.normalize = normalize
@@ -55,9 +56,24 @@ class ShapeNetDataLoader(Dataset):
             cur_len += pts.shape[0]
         return res[:pn]
 
+    def jitter_point_cloud(self, batch_data, sigma=0.01, clip=0.05):
+        """ Randomly jitter points. jittering is per point.
+            Input:
+              BxNx3 array, original batch of point clouds
+            Return:
+              BxNx3 array, jittered batch of point clouds
+        """
+        B, N, C = batch_data.shape
+        assert (clip > 0)
+        jittered_data = np.clip(sigma * np.random.randn(B, N, C), -1 * clip, clip)
+        jittered_data += batch_data
+        return jittered_data
+
     def __getitem__(self, index):
         point_set = self.data[index]
-        seg = self.labels[index]
+        labels = self.labels[index]
+        seg = self.seg_label[index]
+        point_set_norm = None
         #print(point_set.shape, seg.shape)
 
         if self.npoints<=point_set.shape[0]:
@@ -65,14 +81,14 @@ class ShapeNetDataLoader(Dataset):
             point_set = point_set[choice, :]
             seg = seg[choice]
             if self.normalize:
-                point_set = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
+                point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
                 dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
-                point_set = point_set / dist  # scale
+                point_set_norm = point_set_norm / dist  # scale
         else:
             if self.normalize:
-                point_set = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
+                point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
                 dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
-                point_set = point_set / dist  # scale
+                point_set_norm = point_set_norm / dist  # scale
             point_set = self.pc_augment_to_point_num(point_set,self.npoints)
             seg = self.pc_augment_to_point_num(seg,self.npoints)
 
@@ -84,7 +100,7 @@ class ShapeNetDataLoader(Dataset):
 
         point_set = torch.from_numpy(point_set)
         seg = torch.from_numpy(seg)
-        return point_set, seg
+        return point_set,labels,seg,point_set_norm
 
 
 
