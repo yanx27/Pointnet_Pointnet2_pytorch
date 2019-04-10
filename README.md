@@ -25,6 +25,18 @@
 * python train_partseg.py --model_name pointnet
 ### PointNet++
 * python train_partseg.py --model_name pointnet2
+### Performance
+| Model | Inctance avg | Class avg	 |aero |	bag |	cap	 |car	 |chair	 |ear phone	 |guitar |	knife |	lamp	 |laptop |	motor	 |mug |	pistol	 |rocket |	skate board |	 table |
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+|PointNet (Official)	|**83.7**|**80.4**	|83.4|	78.7|	82.5|	74.9|	89.6	|73|	91.5|	85.9	|80.8|	95.3|	65.2	|93|	81.2|	57.9|	72.8|	80.6|
+|PointNet (Pytorch)|	81.1	|77.6|	80.7	|73.6	|79.1	|73.9	|83.1|	60.6|	89.2	|84.7|	78.1	|94.5	|63.4	|90.2	|80.5|52.3	|73.7	|66.8|
+|PointNet++ (Official)|**85.1**	|**81.9**	|82.4|79	|87.7	|77.3|	90.8|	71.8|	91|	85.9|	83.7|	95.3	|71.6|	94.1	|81.3|	58.7|	76.4|	82.6|
+|PointNet++ (Pytorch)|	83.4|	80.5	|82.6|	78.7|	82.3	|78.1|86.8|	63.8	|91.6|	88.9|	83.6	|96.8	|63.3	|95.7	|82.8|	55.7	|76.3	|71.1|
+
+* Class avg is the mean IoU averaged across all object categories, and inctance avg is the mean IoU across all objects.
+* We did not use data augmentation (norm and randomly jitter) so the results is relatively lower than the official version's.
+  
+
 
 ## Training for Sematic Segmentation
 ### PointNet
