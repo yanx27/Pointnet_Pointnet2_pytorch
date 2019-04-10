@@ -4,7 +4,7 @@
 * Download **ModelNet** [here](http://modelnet.cs.princeton.edu/ModelNet40.zip) for classification and **ShapeNet** [here](https://www.shapenet.org/) for part segmentation. Putting them respectively in `./data/ModelNet` and `./data/ShapeNet`.
 * Run `download_data.sh`  and download prepared **S3DIS** dataset for sematic segmantation and save it in `./data/indoor3d_sem_seg_hdf5_data/`
 
-## Training for Classification
+## Classification
 ### PointNet
 * python train_clf.py --model_name pointnet 
 ### PointNet++
@@ -20,7 +20,7 @@
 * Train Pointnet with 0.001 learning rate in SGD, 24 batchsize and 141 epochs can gain the results above.
 * Train Pointnet++ with 0.001 learning rate in SGD, 12 batchsize and 45 epochs can gain the results above.
 
-## Training for Part Segmentation
+## Part Segmentation
 ### PointNet
 * python train_partseg.py --model_name pointnet
 ### PointNet++
@@ -40,7 +40,7 @@
   
 
 
-## Training for Sematic Segmentation
+## Sematic Segmentation
 ### PointNet
 * python train_semseg.py --model_name pointnet
 ### PointNet++
