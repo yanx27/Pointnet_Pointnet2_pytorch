@@ -54,9 +54,9 @@
 * Training Pointnet with 0.001 learning rate in Adam, 24 batchsize and 84 epochs.
 
 ## Visualization
-`
-cd visualizer
-bash build.sh #build C++ code for visualization
+
+`cd visualizer`<br>
+`bash build.sh #build C++ code for visualization`
 `
 ## TODO
 
