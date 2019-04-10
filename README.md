@@ -65,7 +65,7 @@
 
 - [x] PointNet and PointNet++ 
 - [x] Experiment 
-- [ ] Visualization tool
+- [ ] Visualization Tool
 
 
 
