@@ -57,7 +57,7 @@
 
 `cd visualizer`<br>
 `bash build.sh #build C++ code for visualization`
-`
+
 ## TODO
 
 - [x] PointNet and PointNet++ 
