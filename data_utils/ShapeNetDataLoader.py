@@ -36,12 +36,13 @@ def load_data(dir, classification = False):
 
 
 class ShapeNetDataLoader(Dataset):
-    def __init__(self, data, labels,seg_label, npoints=1024, data_augmentation=True,normalize = False):
+    def __init__(self, data, labels,seg_label, npoints=1024, jitter=False, rotation=False, normalize = False):
         self.data = data
         self.labels = labels
         self.seg_label = seg_label
         self.npoints = npoints
-        self.data_augmentation = data_augmentation
+        self.rotation = rotation
+        self.jitter = jitter
         self.normalize = normalize
 
     def __len__(self):
@@ -56,51 +57,39 @@ class ShapeNetDataLoader(Dataset):
             cur_len += pts.shape[0]
         return res[:pn]
 
-    def jitter_point_cloud(self, batch_data, sigma=0.01, clip=0.05):
-        """ Randomly jitter points. jittering is per point.
-            Input:
-              BxNx3 array, original batch of point clouds
-            Return:
-              BxNx3 array, jittered batch of point clouds
-        """
-        B, N, C = batch_data.shape
-        assert (clip > 0)
-        jittered_data = np.clip(sigma * np.random.randn(B, N, C), -1 * clip, clip)
-        jittered_data += batch_data
-        return jittered_data
 
     def __getitem__(self, index):
         point_set = self.data[index]
         labels = self.labels[index]
         seg = self.seg_label[index]
-        point_set_norm = None
         #print(point_set.shape, seg.shape)
 
         if self.npoints<=point_set.shape[0]:
             choice = np.random.choice(len(seg), self.npoints, replace=True) #resample
             point_set = point_set[choice, :]
             seg = seg[choice]
-            if self.normalize:
-                point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
-                dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
-                point_set_norm = point_set_norm / dist  # scale
+            point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
+            dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
+            point_set_norm = point_set_norm / dist  # scale
+            if self.jitter:
+                point_set += np.random.normal(0, 0.02, size=point_set.shape)
+
+
         else:
-            if self.normalize:
-                point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
-                dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
-                point_set_norm = point_set_norm / dist  # scale
+            point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
+            dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
+            point_set_norm = point_set_norm / dist  # scale
             point_set = self.pc_augment_to_point_num(point_set,self.npoints)
             seg = self.pc_augment_to_point_num(seg,self.npoints)
-
-        if self.data_augmentation:
-            theta = np.random.uniform(0,np.pi*2)
-            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
-            point_set[:,[0,2]] = point_set[:,[0,2]].dot(rotation_matrix) # random rotation
-            point_set += np.random.normal(0, 0.02, size=point_set.shape) # random jitter
+            if self.jitter:
+                point_set += np.random.normal(0, 0.02, size=point_set.shape)
 
         point_set = torch.from_numpy(point_set)
         seg = torch.from_numpy(seg)
-        return point_set,labels,seg,point_set_norm
+        if self.normalize:
+            return point_set_norm, labels, seg, point_set_norm
+        else:
+            return point_set,labels,seg,point_set_norm
 
 
 
