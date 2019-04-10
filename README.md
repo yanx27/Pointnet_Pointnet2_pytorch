@@ -52,3 +52,6 @@
 * Train Pointnet with 0.001 learning rate in Adam, 24 batchsize and 84 epochs can gain the results above.
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)
+
+## Links
+[Official PointNet](https://github.com/charlesq34/pointnet) and [Official PointNet++](https://github.com/charlesq34/pointnet2)
