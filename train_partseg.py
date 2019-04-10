@@ -73,11 +73,11 @@ def main(args):
     print("The shape of test data is: ", test_data.shape)
     logger.info("The number of test data is: %d", test_data.shape[0])
 
-    dataset = ShapeNetDataLoader(train_data,train_label,train_seg_label, npoints=2048,data_augmentation=args.data_augmentation,normalize=True)
+    dataset = ShapeNetDataLoader(train_data,train_label,train_seg_label, npoints=2048,jitter=False, rotation=False, normalize = True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
                                              shuffle=True, num_workers=int(args.workers))
 
-    test_dataset = ShapeNetDataLoader(test_data,test_label,test_seg_label, npoints=2048,data_augmentation=False,normalize=True)
+    test_dataset = ShapeNetDataLoader(test_data,test_label,test_seg_label, npoints=2048,jitter=False, rotation=False, normalize = True)
     testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=10,
                                                  shuffle=True, num_workers=int(args.workers))
 
@@ -107,7 +107,7 @@ def main(args):
             eps=1e-08,
             weight_decay=args.decay_rate
         )
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.5)
     '''GPU selection and multi-GPU'''
     if args.multi_gpu is not None:
         device_ids = [int(x) for x in args.multi_gpu.split(',')]
@@ -159,7 +159,7 @@ def main(args):
         print('Epoch %d %s accuracy: %f  Class avg mIOU: %f   Inctance avg mIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],test_metrics['class_avg_iou'],test_metrics['inctance_avg_iou']))
 
-        logger.info('Epoch %d %s accuracy: %f  Class avg mIOU: %f   Inctance avg mIOU: %f' % (
+        logger.info('Epoch %d %s Accuracy: %f  Class avg mIOU: %f   Inctance avg mIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],test_metrics['class_avg_iou'],test_metrics['inctance_avg_iou']))
         if test_metrics['accuracy'] > best_acc:
             best_acc = test_metrics['accuracy']
