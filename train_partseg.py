@@ -6,10 +6,9 @@ import torch.utils.data
 from utils import to_categorical
 from collections import defaultdict
 from torch.autograd import Variable
-from data_utils.ShapeNetDataLoader import ShapeNetDataLoader, load_data
+from data_utils.ShapeNetDataLoader import PartNormalDataset
 import torch.nn.functional as F
 import datetime
-import numpy as np
 import logging
 from pathlib import Path
 from utils import test_partseg
@@ -23,8 +22,6 @@ for cat in seg_classes.keys():
     for label in seg_classes[cat]:
         seg_label_to_cat[label] = cat
 
-
-
 def parse_args():
     parser = argparse.ArgumentParser('PointNet2')
     parser.add_argument('--batchsize', type=int, default=32, help='input batch size')
@@ -37,7 +34,6 @@ def parse_args():
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
-    parser.add_argument('--data_augmentation', default=False, help="data augmentation")
 
     return parser.parse_args()
 
@@ -65,22 +61,15 @@ def main(args):
     logger.info('---------------------------------------------------TRANING---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
-    DATA_PATH = './data/ShapeNet/'
-    print('Load data from %s'%DATA_PATH)
-    train_data, train_label, train_seg_label, test_data, test_label, test_seg_label = load_data(DATA_PATH,classification = False)
-    print("The shape of training data is: ",train_data.shape)
-    logger.info("The number of training data is: %d",train_data.shape[0])
-    print("The shape of test data is: ", test_data.shape)
-    logger.info("The number of test data is: %d", test_data.shape[0])
 
-    dataset = ShapeNetDataLoader(train_data,train_label,train_seg_label, npoints=2048,jitter=False, rotation=False, normalize = True)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batchsize,
-                                             shuffle=True, num_workers=int(args.workers))
-
-    test_dataset = ShapeNetDataLoader(test_data,test_label,test_seg_label, npoints=2048,jitter=False, rotation=False, normalize = True)
-    testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=10,
-                                                 shuffle=True, num_workers=int(args.workers))
-
+    TRAIN_DATASET = PartNormalDataset(npoints=2048, split='trainval')
+    dataloader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batchsize,shuffle=True, num_workers=int(args.workers))
+    TEST_DATASET = PartNormalDataset(npoints=2048, split='test')
+    testdataloader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=10,shuffle=True, num_workers=int(args.workers))
+    print("The number of training data is:",len(TRAIN_DATASET))
+    logger.info("The number of training data is:%d",len(TRAIN_DATASET))
+    print("The number of test data is:", len(TEST_DATASET))
+    logger.info("The number of test data is:%d", len(TEST_DATASET))
     num_classes = 16
     num_part = 50
     blue = lambda x: '\033[94m' + x + '\033[0m'
@@ -107,7 +96,8 @@ def main(args):
             eps=1e-08,
             weight_decay=args.decay_rate
         )
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    
     '''GPU selection and multi-GPU'''
     if args.multi_gpu is not None:
         device_ids = [int(x) for x in args.multi_gpu.split(',')]
