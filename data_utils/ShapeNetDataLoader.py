@@ -1,95 +1,109 @@
 # *_*coding:utf-8 *_*
-import numpy as np
+import os
 import h5py
+import json
 import torch
 import warnings
+import numpy as np
 from torch.utils.data import Dataset
 warnings.filterwarnings('ignore')
 
-def load_h5(h5_filename):
-    f = h5py.File(h5_filename)
-    data = f['data'][:]
-    label = f['label'][:]
-    seg = f['pid'][:]
-    return (data, label, seg)
+def pc_normalize(pc):
+    centroid = np.mean(pc, axis=0)
+    pc = pc - centroid
+    m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
+    pc = pc / m
+    return pc
 
-def load_data(dir, classification = False):
-    data_train0, label_train0, Seglabel_train0  = load_h5(dir + 'ply_data_train0.h5')
-    data_train1, label_train1, Seglabel_train1 = load_h5(dir + 'ply_data_train1.h5')
-    data_train2, label_train2, Seglabel_train2 = load_h5(dir + 'ply_data_train2.h5')
-    data_train3, label_train3, Seglabel_train3 = load_h5(dir + 'ply_data_train3.h5')
-    data_train4, label_train4, Seglabel_train4 = load_h5(dir + 'ply_data_train4.h5')
-    data_train5, label_train5, Seglabel_train5 = load_h5(dir + 'ply_data_train5.h5')
-    data_test0, label_test0, Seglabel_test0 = load_h5(dir + 'ply_data_test0.h5')
-    data_test1 ,label_test1, Seglabel_test1 = load_h5(dir + 'ply_data_test1.h5')
-    train_data = np.concatenate([data_train0,data_train1,data_train2,data_train3,data_train4,data_train5])
-    train_label = np.concatenate([label_train0,label_train1,label_train2,label_train3,label_train4,label_train5])
-    train_Seglabel = np.concatenate([Seglabel_train0,Seglabel_train1,Seglabel_train2,Seglabel_train3,Seglabel_train4,Seglabel_train5])
-    test_data = np.concatenate([data_test0,data_test1])
-    test_label = np.concatenate([label_test0,label_test1])
-    test_Seglabel = np.concatenate([Seglabel_test0,Seglabel_test1])
-
-    if classification:
-        return train_data, train_label, test_data, test_label
-    else:
-        return train_data,train_label,train_Seglabel, test_data,test_label, test_Seglabel
-
-
-class ShapeNetDataLoader(Dataset):
-    def __init__(self, data, labels,seg_label, npoints=1024, jitter=False, rotation=False, normalize = False):
-        self.data = data
-        self.labels = labels
-        self.seg_label = seg_label
+class PartNormalDataset(Dataset):
+    def __init__(self, npoints=2500, split='train', normalize=True):
         self.npoints = npoints
-        self.rotation = rotation
-        self.jitter = jitter
+        self.root = './data/ShapeNet'
+        self.catfile = os.path.join(self.root, 'synsetoffset2category.txt')
+        self.cat = {}
         self.normalize = normalize
 
-    def __len__(self):
-        return len(self.data)
+        with open(self.catfile, 'r') as f:
+            for line in f:
+                ls = line.strip().split()
+                self.cat[ls[0]] = ls[1]
+        self.cat = {k: v for k, v in self.cat.items()}
+        # print(self.cat)
 
-    def pc_augment_to_point_num(self, pts, pn):
-        assert (pts.shape[0] <= pn)
-        cur_len = pts.shape[0]
-        res = np.array(pts)
-        while cur_len < pn:
-            res = np.concatenate((res, pts))
-            cur_len += pts.shape[0]
-        return res[:pn]
+        self.meta = {}
+        with open(os.path.join(self.root, 'train_test_split', 'shuffled_train_file_list.json'), 'r') as f:
+            train_ids = set([str(d.split('/')[2]) for d in json.load(f)])
+        with open(os.path.join(self.root, 'train_test_split', 'shuffled_val_file_list.json'), 'r') as f:
+            val_ids = set([str(d.split('/')[2]) for d in json.load(f)])
+        with open(os.path.join(self.root, 'train_test_split', 'shuffled_test_file_list.json'), 'r') as f:
+            test_ids = set([str(d.split('/')[2]) for d in json.load(f)])
+        for item in self.cat:
+            # print('category', item)
+            self.meta[item] = []
+            dir_point = os.path.join(self.root, self.cat[item])
+            fns = sorted(os.listdir(dir_point))
+            # print(fns[0][0:-4])
+            if split == 'trainval':
+                fns = [fn for fn in fns if ((fn[0:-4] in train_ids) or (fn[0:-4] in val_ids))]
+            elif split == 'train':
+                fns = [fn for fn in fns if fn[0:-4] in train_ids]
+            elif split == 'val':
+                fns = [fn for fn in fns if fn[0:-4] in val_ids]
+            elif split == 'test':
+                fns = [fn for fn in fns if fn[0:-4] in test_ids]
+            else:
+                print('Unknown split: %s. Exiting..' % (split))
+                exit(-1)
 
+            # print(os.path.basename(fns))
+            for fn in fns:
+                token = (os.path.splitext(os.path.basename(fn))[0])
+                self.meta[item].append(os.path.join(dir_point, token + '.txt'))
+
+        self.datapath = []
+        for item in self.cat:
+            for fn in self.meta[item]:
+                self.datapath.append((item, fn))
+
+        self.classes = dict(zip(self.cat, range(len(self.cat))))
+        # Mapping from category ('Chair') to a list of int [10,11,12,13] as segmentation labels
+        self.seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43],
+                            'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46],
+                            'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27],
+                            'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40],
+                            'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
+
+        for cat in sorted(self.seg_classes.keys()):
+            print(cat, self.seg_classes[cat])
+
+        self.cache = {}  # from index to (point_set, cls, seg) tuple
+        self.cache_size = 20000
 
     def __getitem__(self, index):
-        point_set = self.data[index]
-        labels = self.labels[index]
-        seg = self.seg_label[index]
-        #print(point_set.shape, seg.shape)
-
-        if self.npoints<=point_set.shape[0]:
-            choice = np.random.choice(len(seg), self.npoints, replace=True) #resample
-            point_set = point_set[choice, :]
-            seg = seg[choice]
-            point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
-            dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
-            point_set_norm = point_set_norm / dist  # scale
-            if self.jitter:
-                point_set += np.random.normal(0, 0.02, size=point_set.shape)
-
-
+        if index in self.cache:
+            point_set, normal, seg, cls = self.cache[index]
         else:
-            point_set_norm = point_set - np.expand_dims(np.mean(point_set, axis=0), 0)  # center
-            dist = np.max(np.sqrt(np.sum(point_set ** 2, axis=1)), 0)
-            point_set_norm = point_set_norm / dist  # scale
-            point_set = self.pc_augment_to_point_num(point_set,self.npoints)
-            seg = self.pc_augment_to_point_num(seg,self.npoints)
-            if self.jitter:
-                point_set += np.random.normal(0, 0.02, size=point_set.shape)
+            fn = self.datapath[index]
+            cat = self.datapath[index][0]
+            cls = self.classes[cat]
+            cls = np.array([cls]).astype(np.int32)
+            data = np.loadtxt(fn[1]).astype(np.float32)
+            point_set = data[:, 0:3]
+            if self.normalize:
+                point_set = pc_normalize(point_set)
+            normal = data[:, 3:6]
+            seg = data[:, -1].astype(np.int32)
+            if len(self.cache) < self.cache_size:
+                self.cache[index] = (point_set, normal, seg, cls)
 
-        point_set = torch.from_numpy(point_set)
-        seg = torch.from_numpy(seg)
-        if self.normalize:
-            return point_set_norm, labels, seg, point_set_norm
-        else:
-            return point_set,labels,seg,point_set_norm
+        choice = np.random.choice(len(seg), self.npoints, replace=True)
+        # resample
+        point_set = point_set[choice, :]
+        seg = seg[choice]
+        normal = normal[choice, :]
+
+        return point_set,cls, seg, normal
 
 
-
+    def __len__(self):
+        return len(self.datapath)
