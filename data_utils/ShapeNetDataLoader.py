@@ -1,8 +1,6 @@
 # *_*coding:utf-8 *_*
 import os
-import h5py
 import json
-import torch
 import warnings
 import numpy as np
 from torch.utils.data import Dataset
