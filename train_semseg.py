@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import datetime
 import logging
 from pathlib import Path
-from utils import test_seg
+from utils import test_semseg
 from tqdm import tqdm
 from model.pointnet2 import PointNet2SemSeg
 from model.pointnet import PointNetSeg, feature_transform_reguliarzer
@@ -84,12 +84,6 @@ def main(args):
     pretrain = args.pretrain
     init_epoch = int(pretrain[-14:-11]) if args.pretrain is not None else 0
 
-    def adjust_learning_rate(optimizer, step):
-        """Sets the learning rate to the initial LR decayed by 30 every 20000 steps"""
-        lr = args.learning_rate * (0.3 ** (step // 20000))
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-
     if args.optimizer == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     elif args.optimizer == 'Adam':
@@ -100,6 +94,8 @@ def main(args):
             eps=1e-08,
             weight_decay=args.decay_rate
         )
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    LEARNING_RATE_CLIP = 1e-5
 
     '''GPU selection and multi-GPU'''
     if args.multi_gpu is not None:
@@ -113,9 +109,13 @@ def main(args):
     history = defaultdict(lambda: list())
     best_acc = 0
     best_meaniou = 0
-    step = 0
 
     for epoch in range(init_epoch,args.epoch):
+        scheduler.step()
+        lr = max(optimizer.param_groups[0]['lr'],LEARNING_RATE_CLIP)
+        print('Learning rate:%f' % lr)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
         for i, data in tqdm(enumerate(dataloader, 0),total=len(dataloader),smoothing=0.9):
             points, target = data
             points, target = Variable(points.float()), Variable(target.long())
@@ -135,10 +135,8 @@ def main(args):
             history['loss'].append(loss.cpu().data.numpy())
             loss.backward()
             optimizer.step()
-            step += 1
-            adjust_learning_rate(optimizer, step)
-
-        test_metrics, test_hist_acc, cat_mean_iou = test_seg(model, testdataloader, seg_label_to_cat,num_classes = 13)
+        pointnet2 = args.model_name == 'pointnet2'
+        test_metrics, test_hist_acc, cat_mean_iou = test_semseg(model, testdataloader, seg_label_to_cat,num_classes = num_classes,pointnet2=pointnet2)
         mean_iou = np.mean(cat_mean_iou)
         print('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],mean_iou))
