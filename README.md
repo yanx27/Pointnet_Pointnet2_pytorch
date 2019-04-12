@@ -1,5 +1,7 @@
 # Pytorch Implementation of PointNet and PointNet++ 
 
+This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf) and [PointNet++](http://papers.nips.cc/paper/7095-pointnet-deep-hierarchical-feature-learning-on-point-sets-in-a-metric-space.pdf) in pytorch.
+
 ## Data Preparation
 * Download **ModelNet** [here](http://modelnet.cs.princeton.edu/ModelNet40.zip) for classification and **ShapeNet** [here](https://shapenet.cs.stanford.edu/media/shapenetcore_partanno_segmentation_benchmark_v0_normal.zip) for part segmentation. Uncompress the downloaded data in this directory. `./data/ModelNet` and `./data/ShapeNet`.
 * Run `download_data.sh`  and download prepared **S3DIS** dataset for sematic segmantation and save it in `./data/indoor3d_sem_seg_hdf5_data/`
@@ -66,8 +68,6 @@
 - [x] PointNet and PointNet++ 
 - [x] Experiment 
 - [ ] Visualization Tool
-
-
 
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)<br>
