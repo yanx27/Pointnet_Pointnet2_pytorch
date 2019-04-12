@@ -136,8 +136,7 @@ def test_partseg(model, loader, catdict, num_classes = 50,forpointnet2=False):
 
     return metrics, hist_acc, cat_iou
 
-def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
-    ''' catdict = {0:Airplane, 1:Airplane, ...49:Table} '''
+def test_semseg(model, loader, catdict, num_classes = 13, pointnet2=False):
     iou_tabel = np.zeros((len(catdict),3))
     metrics = defaultdict(lambda:list())
     hist_acc = []
@@ -146,12 +145,13 @@ def test_seg(model, loader, catdict, num_classes = 50, pointnet2forseg=False):
         points, target = Variable(points.float()), Variable(target.long())
         points = points.transpose(2, 1)
         points, target = points.cuda(), target.cuda()
-        if pointnet2forseg:
+        if pointnet2:
             pred, _ = model(points[:, :3, :], points[:, 3:, :])
+            pred = pred.transpose(2, 1)
         else:
             pred, _ = model(points)
         # print(pred.size())
-        iou_tabel = compute_cat_iou(pred,target,iou_tabel)
+        iou_tabel, iou_list = compute_cat_iou(pred,target,iou_tabel)
         # shape_ious += compute_overall_iou(pred, target, num_classes)
         pred = pred.contiguous().view(-1, num_classes)
         target = target.view(-1, 1)[:, 0]
