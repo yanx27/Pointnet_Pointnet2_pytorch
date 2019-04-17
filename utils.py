@@ -146,8 +146,7 @@ def test_semseg(model, loader, catdict, num_classes = 13, pointnet2=False):
         points = points.transpose(2, 1)
         points, target = points.cuda(), target.cuda()
         if pointnet2:
-            pred, _ = model(points[:, :3, :], points[:, 3:, :])
-            pred = pred.transpose(2, 1)
+            pred = model(points[:, :3, :], points[:, 3:, :])
         else:
             pred, _ = model(points)
         # print(pred.size())
@@ -164,7 +163,7 @@ def test_semseg(model, loader, catdict, num_classes = 13, pointnet2=False):
     metrics['iou'] = np.mean(iou_tabel[:, 2])
     iou_tabel = pd.DataFrame(iou_tabel,columns=['iou','count','mean_iou'])
     iou_tabel['Category_IOU'] = [catdict[i] for i in range(len(catdict)) ]
-    print(iou_tabel)
+    # print(iou_tabel)
     cat_iou = iou_tabel.groupby('Category_IOU')['mean_iou'].mean()
 
     return metrics, hist_acc, cat_iou
