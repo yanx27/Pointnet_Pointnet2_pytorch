@@ -41,7 +41,7 @@ def main(args):
     '''CREATE DIR'''
     experiment_dir = Path('./experiment/')
     experiment_dir.mkdir(exist_ok=True)
-    file_dir = Path(str(experiment_dir) +'/'+ str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
+    file_dir = Path(str(experiment_dir) +'/%sSemSeg-'%args.model_name+ str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
     file_dir.mkdir(exist_ok=True)
     checkpoints_dir = file_dir.joinpath('checkpoints/')
     checkpoints_dir.mkdir(exist_ok=True)
@@ -126,7 +126,7 @@ def main(args):
             if args.model_name == 'pointnet':
                 pred, trans_feat = model(points)
             else:
-                pred, _ = model(points[:,:3,:],points[:,3:,:])
+                pred = model(points[:,:3,:],points[:,3:,:])
             pred = pred.contiguous().view(-1, num_classes)
             target = target.view(-1, 1)[:, 0]
             loss = F.nll_loss(pred, target)
