@@ -34,6 +34,9 @@ def parse_args():
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
+    parser.add_argument('--jitter', default=False, help="randomly jitter point cloud")
+    parser.add_argument('--rotation', default=False, help="randomly rotate point cloud")
+    parser.add_argument('--normalize', default=False, help="normalize point cloud")
 
     return parser.parse_args()
 
@@ -42,7 +45,7 @@ def main(args):
     '''CREATE DIR'''
     experiment_dir = Path('./experiment/')
     experiment_dir.mkdir(exist_ok=True)
-    file_dir = Path(str(experiment_dir) +'/'+ str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
+    file_dir = Path(str(experiment_dir) +'/%sPartSeg-'%args.model_name + str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
     file_dir.mkdir(exist_ok=True)
     checkpoints_dir = file_dir.joinpath('checkpoints/')
     checkpoints_dir.mkdir(exist_ok=True)
@@ -61,10 +64,10 @@ def main(args):
     logger.info('---------------------------------------------------TRANING---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
-
-    TRAIN_DATASET = PartNormalDataset(npoints=2048, split='trainval')
+    norm = True if args.model_name == 'pointnet' else False
+    TRAIN_DATASET = PartNormalDataset(npoints=2048, split='trainval',normalize=norm, jitter=False)
     dataloader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batchsize,shuffle=True, num_workers=int(args.workers))
-    TEST_DATASET = PartNormalDataset(npoints=2048, split='test')
+    TEST_DATASET = PartNormalDataset(npoints=2048, split='test',normalize=norm,jitter=False)
     testdataloader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=10,shuffle=True, num_workers=int(args.workers))
     print("The number of training data is:",len(TRAIN_DATASET))
     logger.info("The number of training data is:%d",len(TRAIN_DATASET))
@@ -97,7 +100,7 @@ def main(args):
             weight_decay=args.decay_rate
         )
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-    
+
     '''GPU selection and multi-GPU'''
     if args.multi_gpu is not None:
         device_ids = [int(x) for x in args.multi_gpu.split(',')]
@@ -144,7 +147,7 @@ def main(args):
             optimizer.step()
 
         forpointnet2 = args.model_name == 'pointnet2'
-        test_metrics, test_hist_acc, cat_mean_iou = test_partseg(model, testdataloader, seg_label_to_cat,50,forpointnet2)
+        test_metrics, test_hist_acc, cat_mean_iou = test_partseg(model.eval(), testdataloader, seg_label_to_cat,50,forpointnet2)
 
         print('Epoch %d %s accuracy: %f  Class avg mIOU: %f   Inctance avg mIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],test_metrics['class_avg_iou'],test_metrics['inctance_avg_iou']))
@@ -173,3 +176,4 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     main(args)
+
