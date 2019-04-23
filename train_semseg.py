@@ -136,7 +136,7 @@ def main(args):
             loss.backward()
             optimizer.step()
         pointnet2 = args.model_name == 'pointnet2'
-        test_metrics, test_hist_acc, cat_mean_iou = test_semseg(model, testdataloader, seg_label_to_cat,num_classes = num_classes,pointnet2=pointnet2)
+        test_metrics, test_hist_acc, cat_mean_iou = test_semseg(model.eval(), testdataloader, seg_label_to_cat,num_classes = num_classes,pointnet2=pointnet2)
         mean_iou = np.mean(cat_mean_iou)
         print('Epoch %d  %s accuracy: %f  meanIOU: %f' % (
                  epoch, blue('test'), test_metrics['accuracy'],mean_iou))
