@@ -118,6 +118,8 @@ def main(args):
             optimizer.zero_grad()
             classifier = classifier.train()
             pred, trans_feat = classifier(points)
+            print(pred.shape)
+            print(target.shape)
             loss = F.nll_loss(pred, target.long())
             if args.feature_transform and args.model_name == 'pointnet':
                 loss += feature_transform_reguliarzer(trans_feat) * 0.001
@@ -126,7 +128,7 @@ def main(args):
             optimizer.step()
             global_step += 1
 
-        train_acc = test(classifier, trainDataLoader) if args.train_metric else None
+        train_acc = test(classifier.eval(), trainDataLoader) if args.train_metric else None
         acc = test(classifier, testDataLoader)
 
 
