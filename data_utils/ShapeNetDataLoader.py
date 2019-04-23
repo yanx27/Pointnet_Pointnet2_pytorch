@@ -13,13 +13,27 @@ def pc_normalize(pc):
     pc = pc / m
     return pc
 
+def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
+    """ Randomly jitter points. jittering is per point.
+        Input:
+          BxNx3 array, original batch of point clouds
+        Return:
+          BxNx3 array, jittered batch of point clouds
+    """
+    N, C = batch_data.shape
+    assert(clip > 0)
+    jittered_data = np.clip(sigma * np.random.randn(N, C), -1*clip, clip)
+    jittered_data += batch_data
+    return jittered_data
+
 class PartNormalDataset(Dataset):
-    def __init__(self, npoints=2500, split='train', normalize=True):
+    def __init__(self, npoints=2500, split='train', normalize=True, jitter=False):
         self.npoints = npoints
-        self.root = './data/ShapeNet'
+        self.root = './data/shapenetcore_partanno_segmentation_benchmark_v0_normal'
         self.catfile = os.path.join(self.root, 'synsetoffset2category.txt')
         self.cat = {}
         self.normalize = normalize
+        self.jitter = jitter
 
         with open(self.catfile, 'r') as f:
             for line in f:
@@ -87,18 +101,21 @@ class PartNormalDataset(Dataset):
             cls = np.array([cls]).astype(np.int32)
             data = np.loadtxt(fn[1]).astype(np.float32)
             point_set = data[:, 0:3]
-            if self.normalize:
-                point_set = pc_normalize(point_set)
             normal = data[:, 3:6]
             seg = data[:, -1].astype(np.int32)
             if len(self.cache) < self.cache_size:
                 self.cache[index] = (point_set, normal, seg, cls)
-
+        if self.normalize:
+            point_set = pc_normalize(point_set)
+        if self.jitter:
+            jitter_point_cloud(point_set)
         choice = np.random.choice(len(seg), self.npoints, replace=True)
         # resample
         point_set = point_set[choice, :]
         seg = seg[choice]
         normal = normal[choice, :]
+
+
 
         return point_set,cls, seg, normal
 
