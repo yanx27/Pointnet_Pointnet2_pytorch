@@ -35,8 +35,7 @@ def parse_args():
     parser.add_argument('--optimizer', type=str, default='Adam', help='type of optimizer')
     parser.add_argument('--multi_gpu', type=str, default=None, help='whether use multi gpu training')
     parser.add_argument('--jitter', default=False, help="randomly jitter point cloud")
-    parser.add_argument('--rotation', default=False, help="randomly rotate point cloud")
-    parser.add_argument('--normalize', default=False, help="normalize point cloud")
+    parser.add_argument('--step_size', type=int, default=20, help="randomly rotate point cloud")
 
     return parser.parse_args()
 
@@ -65,7 +64,7 @@ def main(args):
     logger.info('PARAMETER ...')
     logger.info(args)
     norm = True if args.model_name == 'pointnet' else False
-    TRAIN_DATASET = PartNormalDataset(npoints=2048, split='trainval',normalize=norm, jitter=False)
+    TRAIN_DATASET = PartNormalDataset(npoints=2048, split='trainval',normalize=norm, jitter=args.jitter)
     dataloader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batchsize,shuffle=True, num_workers=int(args.workers))
     TEST_DATASET = PartNormalDataset(npoints=2048, split='test',normalize=norm,jitter=False)
     testdataloader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=10,shuffle=True, num_workers=int(args.workers))
@@ -99,7 +98,7 @@ def main(args):
             eps=1e-08,
             weight_decay=args.decay_rate
         )
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.5)
 
     '''GPU selection and multi-GPU'''
     if args.multi_gpu is not None:
