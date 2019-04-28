@@ -35,7 +35,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 |PointNet++ (Official)|**85.1**	|**81.9**	|82.4|79	|87.7	|77.3|	90.8|	71.8|	91|	85.9|	83.7|	95.3	|71.6|	94.1	|81.3|	58.7|	76.4|	82.6|
 |PointNet++ (Pytorch)|	84.1|	81.6	|82.6|	85.7|	89.3	|78.1|86.8|	68.9	|91.6|	88.9|	83.9	|96.8	|70.1	|95.7	|82.8|	59.8	|76.3	|71.1|
 
-* Training both Pointnet and Pointnet++ with 0.001 learning rate in Adam, 16 batchsize and 0.5 learning rate decay every 20 epochs.
+* Training both Pointnet and Pointnet++ with 0.001 learning rate in Adam, 16 batchsize, about 130 epochs and 0.5 learning rate decay every 20/30 epochs.
 * **Class avg** is the mean IoU averaged across all object categories, and **inctance avg** is the mean IoU across all objects.
 * In official version PointNet, author use 2048 point cloud in training and 3000 point cloud with norm in testing. In official version PointNet++, author use 2048 point cloud with its norm (Bx2048x6) in both training and testing.
   
