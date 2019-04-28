@@ -37,7 +37,6 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 
 * Training both Pointnet and Pointnet++ with 0.001 learning rate in Adam, 16 batchsize and 0.5 learning rate decay every 20 epochs.
 * **Class avg** is the mean IoU averaged across all object categories, and **inctance avg** is the mean IoU across all objects.
-* We did not use data augmentation (norm and randomly jitter) so the results is relatively lower than the official version's.
 * In official version PointNet, author use 2048 point cloud in training and 3000 point cloud with norm in testing. In official version PointNet++, author use 2048 point cloud with its norm (Bx2048x6) in both training and testing.
   
 
