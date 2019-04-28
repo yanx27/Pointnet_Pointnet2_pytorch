@@ -41,7 +41,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
   
 
 
-## Sematic Segmentation
+## Semantic Segmentation
 ### PointNet
 * python train_semseg.py --model_name pointnet
 ### PointNet++
