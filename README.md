@@ -59,7 +59,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 ### Using show3d_balls.py
 `cd visualizer`<br>
 `bash build.sh #build C++ code for visualization`
-
+![](/visualizer/pic.png)
 ### Using pc_utils.py
 ![](/visualizer/example.jpg)
 
@@ -67,7 +67,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 
 - [x] PointNet and PointNet++ 
 - [x] Experiment 
-- [ ] Visualization Tool
+- [x] Visualization Tool
 
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)<br>
