@@ -72,7 +72,7 @@ Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and y
 ### Performance (Area_5)
 |Model  | Mean IOU | 
 |--|--|
-| PointNet (Official) | 41.09|
+| PointNet (Official) | 41.1|
 | PointNet (Pytorch) | 48.9|
 | PointNet++ (Official) |N/A | 
 | PointNet++ (Pytorch) | 53.2|
