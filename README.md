@@ -41,7 +41,7 @@ Download alignment **ShapeNet** [here](https://shapenet.cs.stanford.edu/media/sh
 ```
 ## Check model in ./models 
 ## E.g. pointnet2_msg
-python train_partseg.py --model pointnet2_part_seg_msg --normal
+python train_partseg.py --model pointnet2_part_seg_msg --normal --log_dir pointnet2_part_seg_msg
 python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 ```
 ### Performance
@@ -49,7 +49,7 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 |--|--|--|
 |PointNet (Official)	|83.7|80.4	
 |PointNet2 (Official)|85.1	|81.9	
-|PointNet (Pytorch)|	83.9	|80.3|	
+|PointNet (Pytorch)|	84.1	|80.7|	
 |PointNet2_ssg (Pytorch)|	-|	-	
 |PointNet2_msg (Pytorch)|	-|	-	
 
@@ -66,7 +66,7 @@ Processed data will save in `data/stanford_indoor3d/`.
 ```
 ## Check model in ./models 
 ## E.g. pointnet2_ssg
-python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5
+python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5 --log_dir pointnet2_sem_seg
 python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5 --visual
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
@@ -95,5 +95,5 @@ python show3d_balls.py
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)<br>
 [fxia22/pointnet.pytorch](https://github.com/fxia22/pointnet.pytorch)<br>
-[Official PointNet](https://github.com/charlesq34/pointnet) <br>
-[Official PointNet++](https://github.com/charlesq34/pointnet2)
+[charlesq34/PointNet](https://github.com/charlesq34/pointnet) <br>
+[charlesq34/PointNet++](https://github.com/charlesq34/pointnet2)
