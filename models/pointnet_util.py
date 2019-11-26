@@ -295,9 +295,10 @@ class PointNetFeaturePropagation(nn.Module):
             dists = square_distance(xyz1, xyz2)
             dists, idx = dists.sort(dim=-1)
             dists, idx = dists[:, :, :3], idx[:, :, :3]  # [B, N, 3]
-            dists[dists < 1e-10] = 1e-10
-            weight = 1.0 / dists  # [B, N, 3]
-            weight = weight / torch.sum(weight, dim=-1).view(B, N, 1)  # [B, N, 3]
+
+            dist_recip = 1.0 / (dists + 1e-8)
+            norm = torch.sum(dist_recip, dim=2, keepdim=True)
+            weight = dist_recip / norm
             interpolated_points = torch.sum(index_points(points2, idx) * weight.view(B, N, 3, 1), dim=2)
 
         if points1 is not None:
@@ -309,6 +310,6 @@ class PointNetFeaturePropagation(nn.Module):
         new_points = new_points.permute(0, 2, 1)
         for i, conv in enumerate(self.mlp_convs):
             bn = self.mlp_bns[i]
-            new_points =  F.relu(bn(conv(new_points)))
+            new_points = F.relu(bn(conv(new_points)))
         return new_points
 
