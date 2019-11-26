@@ -83,8 +83,7 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    # root = 'data/stanford_indoor3d/'
-    root = '/data/yxu/PointNonLocal/data/stanford_indoor3d/'
+    root = 'data/stanford_indoor3d/'
     NUM_CLASSES = 13
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
@@ -94,8 +93,9 @@ def main(args):
     TRAIN_DATASET = S3DISDataset(root, split='train', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
     print("start loading whole scene validation data ...")
     TEST_DATASET_WHOLE_SCENE = S3DISDatasetWholeScene(root, split='test', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
-
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,shuffle=True, num_workers=4)
+    labelweights = TRAIN_DATASET.labelweights
+    labelweights = torch.Tensor(labelweights).cuda()
 
     log_string("The number of training data is: %d" % len(TRAIN_DATASET))
     log_string("The number of test data is: %d" %  len(TEST_DATASET_WHOLE_SCENE))
@@ -182,7 +182,7 @@ def main(args):
             pred_choice = seg_pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
             mean_correct.append(correct.item() / (args.batch_size * args.npoint))
-            loss = criterion(seg_pred, target, trans_feat)
+            loss = criterion(seg_pred, target, trans_feat, labelweights)
             loss.backward()
             optimizer.step()
         train_instance_acc = np.mean(mean_correct)
