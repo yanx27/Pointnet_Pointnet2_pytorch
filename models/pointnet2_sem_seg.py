@@ -39,7 +39,7 @@ class get_model(nn.Module):
         l3_points = self.fp4(l3_xyz, l4_xyz, l3_points, l4_points)
         l2_points = self.fp3(l2_xyz, l3_xyz, l2_points, l3_points)
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)
-        l0_points = self.fp1(xyz, l1_xyz, None, l1_points)
+        l0_points = self.fp1(l0_xyz, l1_xyz, None, l1_points)
 
         x = self.drop1(F.relu(self.bn1(self.conv1(l0_points))))
         x = self.conv2(x)
@@ -59,5 +59,5 @@ class get_loss(nn.Module):
 if __name__ == '__main__':
     import  torch
     model = get_model(13, with_rgb=True)
-    xyz = torch.rand(12, 6, 2048)
+    xyz = torch.rand(6, 6, 2048)
     (model(xyz))
