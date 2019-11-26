@@ -14,7 +14,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 
 ## Classification
 ### Data Preparation
-Download alignment **ModelNet** [here](https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip) and save in `data/modelnet40_normal_resampled/`
+Download alignment **ModelNet** [here](https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip) and save in `data/modelnet40_normal_resampled/`.
 
 ### Run
 ```
@@ -36,7 +36,7 @@ python test_cls.py --normal --log_dir pointnet2_cls_msg
 
 ## Part Segmentation
 ### Data Preparation
-Download alignment **ShapeNet** [here](https://shapenet.cs.stanford.edu/media/shapenetcore_partanno_segmentation_benchmark_v0_normal.zip)  and save in `data/shapenetcore_partanno_segmentation_benchmark_v0_normal/`
+Download alignment **ShapeNet** [here](https://shapenet.cs.stanford.edu/media/shapenetcore_partanno_segmentation_benchmark_v0_normal.zip)  and save in `data/shapenetcore_partanno_segmentation_benchmark_v0_normal/`.
 ### Run
 ```
 ## Check model in ./models folder
@@ -54,6 +54,13 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 
 
 ## Semantic Segmentation
+### Data Preparation
+Download 3D indoor parsing dataset (S3DIS Dataset) [here](http://buildingparser.stanford.edu/dataset.html)  and save in `data/Stanford3dDataset_v1.2/`.
+```
+cd data_utils
+python collect_indoor3d_data.py
+```
+Prepared data will save in `data/S3DIS/stanford_indoor3d/`.
 ### Run
 ```
 ## Check model in ./models folder
