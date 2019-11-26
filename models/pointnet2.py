@@ -2,16 +2,14 @@ import torch.nn as nn
 import torch
 import numpy as np
 import torch.nn.functional as F
-from model.pointnet_util import PointNetSetAbstractionMsg,PointNetSetAbstraction,PointNetFeaturePropagation
+from pointnet_util import PointNetSetAbstractionMsg, PointNetSetAbstraction,PointNetFeaturePropagation
 
 
 class PointNet2ClsMsg(nn.Module):
     def __init__(self):
         super(PointNet2ClsMsg, self).__init__()
-        self.sa1 = PointNetSetAbstractionMsg(512, [0.1, 0.2, 0.4], [16, 32, 128], 0,
-                                             [[32, 32, 64], [64, 64, 128], [64, 96, 128]])
-        self.sa2 = PointNetSetAbstractionMsg(128, [0.2, 0.4, 0.8], [32, 64, 128], 320,
-                                             [[64, 64, 128], [128, 128, 256], [128, 128, 256]])
+        self.sa1 = PointNetSetAbstractionMsg(512, [0.1, 0.2, 0.4], [16, 32, 128], 0,[[32, 32, 64], [64, 64, 128], [64, 96, 128]])
+        self.sa2 = PointNetSetAbstractionMsg(128, [0.2, 0.4, 0.8], [32, 64, 128], 320,[[64, 64, 128], [128, 128, 256], [128, 128, 256]])
         self.sa3 = PointNetSetAbstraction(None, None, None, 640 + 3, [256, 512, 1024], True)
         self.fc1 = nn.Linear(1024, 512)
         self.bn1 = nn.BatchNorm1d(512)

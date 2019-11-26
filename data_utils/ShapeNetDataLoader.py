@@ -13,33 +13,24 @@ def pc_normalize(pc):
     pc = pc / m
     return pc
 
-def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
-    """ Randomly jitter points. jittering is per point.
-        Input:
-          BxNx3 array, original batch of point clouds
-        Return:
-          BxNx3 array, jittered batch of point clouds
-    """
-    N, C = batch_data.shape
-    assert(clip > 0)
-    jittered_data = np.clip(sigma * np.random.randn(N, C), -1*clip, clip)
-    jittered_data += batch_data
-    return jittered_data
-
 class PartNormalDataset(Dataset):
-    def __init__(self, npoints=2500, split='train', normalize=True, jitter=False):
+    def __init__(self,root = './data/shapenetcore_partanno_segmentation_benchmark_v0_normal', npoints=2500, split='train', class_choice=None, normal_channel=False):
         self.npoints = npoints
-        self.root = './data/shapenetcore_partanno_segmentation_benchmark_v0_normal'
+        self.root = root
         self.catfile = os.path.join(self.root, 'synsetoffset2category.txt')
         self.cat = {}
-        self.normalize = normalize
-        self.jitter = jitter
+        self.normal_channel = normal_channel
+
 
         with open(self.catfile, 'r') as f:
             for line in f:
                 ls = line.strip().split()
                 self.cat[ls[0]] = ls[1]
         self.cat = {k: v for k, v in self.cat.items()}
+        self.classes_original = dict(zip(self.cat, range(len(self.cat))))
+
+        if not class_choice is  None:
+            self.cat = {k:v for k,v in self.cat.items() if k in class_choice}
         # print(self.cat)
 
         self.meta = {}
@@ -77,7 +68,10 @@ class PartNormalDataset(Dataset):
             for fn in self.meta[item]:
                 self.datapath.append((item, fn))
 
-        self.classes = dict(zip(self.cat, range(len(self.cat))))
+        self.classes = {}
+        for i in self.cat.keys():
+            self.classes[i] = self.classes_original[i]
+
         # Mapping from category ('Chair') to a list of int [10,11,12,13] as segmentation labels
         self.seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43],
                             'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46],
@@ -85,40 +79,40 @@ class PartNormalDataset(Dataset):
                             'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40],
                             'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 
-        for cat in sorted(self.seg_classes.keys()):
-            print(cat, self.seg_classes[cat])
+        # for cat in sorted(self.seg_classes.keys()):
+        #     print(cat, self.seg_classes[cat])
 
         self.cache = {}  # from index to (point_set, cls, seg) tuple
         self.cache_size = 20000
 
+
     def __getitem__(self, index):
         if index in self.cache:
-            point_set, normal, seg, cls = self.cache[index]
+            ppoint_set, cls, seg = self.cache[index]
         else:
             fn = self.datapath[index]
             cat = self.datapath[index][0]
             cls = self.classes[cat]
             cls = np.array([cls]).astype(np.int32)
             data = np.loadtxt(fn[1]).astype(np.float32)
-            point_set = data[:, 0:3]
-            normal = data[:, 3:6]
+            if not self.normal_channel:
+                point_set = data[:, 0:3]
+            else:
+                point_set = data[:, 0:6]
             seg = data[:, -1].astype(np.int32)
             if len(self.cache) < self.cache_size:
-                self.cache[index] = (point_set, normal, seg, cls)
-        if self.normalize:
-            point_set = pc_normalize(point_set)
-        if self.jitter:
-            jitter_point_cloud(point_set)
+                self.cache[index] = (point_set, cls, seg)
+        point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
+
         choice = np.random.choice(len(seg), self.npoints, replace=True)
         # resample
         point_set = point_set[choice, :]
         seg = seg[choice]
-        normal = normal[choice, :]
 
-
-
-        return point_set,cls, seg, normal
-
+        return point_set, cls, seg
 
     def __len__(self):
         return len(self.datapath)
+
+
+
