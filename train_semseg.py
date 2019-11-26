@@ -166,7 +166,6 @@ def main(args):
         for i, data in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
             points, target, weight = data
             points = points.data.numpy()
-            points[:, :, :3] = provider.normalize_data(points[:, :, :3])
             points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
             points[:,:, 0:3] = provider.rotate_point_cloud_z(points[:,:, 0:3])
             points = torch.Tensor(points)
@@ -232,7 +231,6 @@ def main(args):
                         batch_label = batch_label[:BATCH_SIZE, :]
                         batch_smpw = batch_smpw[:BATCH_SIZE, :]
 
-                    batch_data[:, :, :3] = provider.normalize_data(batch_data[:, :, :3])
                     batch_label = torch.Tensor(batch_label)
                     batch_data = torch.Tensor(batch_data)
                     batch_data, batch_label = batch_data.float().cuda(), batch_label.long().cuda()
