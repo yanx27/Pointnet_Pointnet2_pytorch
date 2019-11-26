@@ -55,7 +55,7 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 
 ## Semantic Segmentation
 ### Data Preparation
-Download 3D indoor parsing dataset (S3DIS Dataset) [here](http://buildingparser.stanford.edu/dataset.html)  and save in `data/Stanford3dDataset_v1.2/`.
+Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stanford.edu/dataset.html)  and save in `data/Stanford3dDataset_v1.2/`.
 ```
 cd data_utils
 python collect_indoor3d_data.py
@@ -68,7 +68,7 @@ Prepared data will save in `data/S3DIS/stanford_indoor3d/`.
 python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5
 python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5
 ```
-Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file with [MeshLab](http://www.meshlab.net/).
+Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
 ### Performance (Area_5)
 |Model  | Mean IOU | 
 |--|--|
