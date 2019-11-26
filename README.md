@@ -5,11 +5,11 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 ## Update
 **2019/11/26:**
 
-(1). Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.5\%! 
+(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.5\%! 
 
-(2). Added testing codes, including classification and segmentation, and semantic segmentation with visualization. 
+(2) Added testing codes, including classification and segmentation, and semantic segmentation with visualization. 
 
-(3). Organized all models into `./models` files for easy use.
+(3) Organized all models into `./models` files for easy using.
 
 
 ## Classification
