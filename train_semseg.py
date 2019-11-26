@@ -279,6 +279,8 @@ def main(args):
                     torch.save(state, savepath)
                     log_string('Saving model....')
 
+        global_epoch += 1
+
 
 if __name__ == '__main__':
     args = parse_args()

@@ -1,7 +1,5 @@
 import os
 import sys
-
-
 import indoor3d_util
 
 anno_paths = [line.rstrip() for line in open( 'meta/anno_paths.txt')]

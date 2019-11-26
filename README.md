@@ -28,7 +28,7 @@ python test_cls.py --normal --log_dir pointnet2_cls_msg
 | Model | Accuracy |
 |--|--|
 | PointNet (Official) |  89.2|
-| PointNet++ (Official) | 91.9 |
+| PointNet2 (Official) | 91.9 |
 | PointNet (Pytorch without normal) |  90.6|
 | PointNet (Pytorch with normal) |  91.4|
 | PointNet2_ssg (Pytorch without normal) |  92.2|
@@ -47,10 +47,10 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 ### Performance
 | Model | Inctance avg | Class avg	 
 |--|--|--|
-|PointNet (Official)	|**83.7**|**80.4**	
-|PointNet (Pytorch)|	-	|-|	
-|PointNet++ (Official)|**85.1**	|**81.9**	
-|PointNet++ (Pytorch)|	-|	-	
+|PointNet (Official)	|83.7|80.4	
+|PointNet++ (Official)|85.1	|81.9	
+|PointNet (Pytorch)|	83.9	|80.3|	
+|PointNet2_ssg (Pytorch)|	-|	-	
 
 
 ## Semantic Segmentation
@@ -65,23 +65,24 @@ Prepared data will save in `data/S3DIS/stanford_indoor3d/`.
 ```
 ## Check model in ./models folder
 ## E.g. pointnet2_ssg
-python train_semseg.py --model pointnet2_sem_seg --normal
-python test_semseg.py --normal --log_dir pointnet2_sem_seg
+python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5
+python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5
 ```
-### Performance (test on Area_5)
+Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file with [MeshLab](http://www.meshlab.net/).
+### Performance (Area_5)
 |Model  | Mean IOU | 
 |--|--|
 | PointNet (Official) | 41.09|
-| PointNet (Pytorch) | -|
+| PointNet (Pytorch) | 48.9|
 | PointNet++ (Official) |N/A | 
-| PointNet++ (Pytorch) | -|
-
+| PointNet++ (Pytorch) | 53.2|
 
 ## Visualization
 ### Using show3d_balls.py
 ```
+## build C++ code for visualization
 cd visualizer
-bash build.sh #build C++ code for visualization
+bash build.sh 
 ## run one example 
 python show3d_balls.py
 ```
@@ -92,7 +93,6 @@ python show3d_balls.py
 
 ## Reference By
 [halimacc/pointnet3](https://github.com/halimacc/pointnet3)<br>
-[fxia22/pointnet.pytorch](https://github.com/fxia22/pointnet.pytorch)
-
-## Links
-[Official PointNet](https://github.com/charlesq34/pointnet) and [Official PointNet++](https://github.com/charlesq34/pointnet2)
+[fxia22/pointnet.pytorch](https://github.com/fxia22/pointnet.pytorch)<br>
+[Official PointNet](https://github.com/charlesq34/pointnet) <br>
+[Official PointNet++](https://github.com/charlesq34/pointnet2)
