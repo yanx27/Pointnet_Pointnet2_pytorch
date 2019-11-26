@@ -18,7 +18,7 @@ Download alignment **ModelNet** [here](https://shapenet.cs.stanford.edu/media/mo
 
 ### Run
 ```
-## Check model in ./models folder
+## Check model in ./models 
 ## E.g. pointnet2_msg
 python train_cls.py --model pointnet2_cls_msg --normal --log_dir pointnet2_cls_msg
 python test_cls.py --normal --log_dir pointnet2_cls_msg
@@ -39,7 +39,7 @@ python test_cls.py --normal --log_dir pointnet2_cls_msg
 Download alignment **ShapeNet** [here](https://shapenet.cs.stanford.edu/media/shapenetcore_partanno_segmentation_benchmark_v0_normal.zip)  and save in `data/shapenetcore_partanno_segmentation_benchmark_v0_normal/`.
 ### Run
 ```
-## Check model in ./models folder
+## Check model in ./models 
 ## E.g. pointnet2_msg
 python train_partseg.py --model pointnet2_part_seg_msg --normal
 python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
@@ -48,9 +48,10 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 | Model | Inctance avg | Class avg	 
 |--|--|--|
 |PointNet (Official)	|83.7|80.4	
-|PointNet++ (Official)|85.1	|81.9	
+|PointNet2 (Official)|85.1	|81.9	
 |PointNet (Pytorch)|	83.9	|80.3|	
 |PointNet2_ssg (Pytorch)|	-|	-	
+|PointNet2_msg (Pytorch)|	-|	-	
 
 
 ## Semantic Segmentation
@@ -60,13 +61,13 @@ Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stan
 cd data_utils
 python collect_indoor3d_data.py
 ```
-Processed data will save in `data/S3DIS/stanford_indoor3d/`.
+Processed data will save in `data/stanford_indoor3d/`.
 ### Run
 ```
-## Check model in ./models folder
+## Check model in ./models 
 ## E.g. pointnet2_ssg
 python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5
-python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5
+python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5 --visual
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
 ### Performance (Area_5)
@@ -74,8 +75,8 @@ Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and y
 |--|--|
 | PointNet (Official) | 41.1|
 | PointNet (Pytorch) | 48.9|
-| PointNet++ (Official) |N/A | 
-| PointNet++ (Pytorch) | 53.2|
+| PointNet2 (Official) |N/A | 
+| PointNet2_ssg (Pytorch) | 53.2|
 
 ## Visualization
 ### Using show3d_balls.py

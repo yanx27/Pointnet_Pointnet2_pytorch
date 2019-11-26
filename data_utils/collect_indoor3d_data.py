@@ -1,11 +1,15 @@
 import os
 import sys
-import indoor3d_util
+from indoor3d_util import DATA_PATH, collect_point_label
 
-anno_paths = [line.rstrip() for line in open( 'meta/anno_paths.txt')]
-anno_paths = [os.path.join(indoor3d_util.DATA_PATH, p) for p in anno_paths]
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+sys.path.append(BASE_DIR)
 
-output_folder = '../data/stanford_indoor3d/'
+anno_paths = [line.rstrip() for line in open(os.path.join(BASE_DIR, 'meta/anno_paths.txt'))]
+anno_paths = [os.path.join(DATA_PATH, p) for p in anno_paths]
+
+output_folder = os.path.join(ROOT_DIR, 'data/stanford_indoor3d')
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 

@@ -8,7 +8,7 @@ ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(BASE_DIR)
 sys.path.append(ROOT_DIR)
 
-# root = '../data/S3DIS/stanford_indoor3d/'
+# root = '../data/stanford_indoor3d/'
 
 class S3DISDataset(Dataset):
     def __init__(self, root, block_points=8192, split='train', test_area=5, with_rgb=True, use_weight=True, block_size=1.5, padding=0.001):
