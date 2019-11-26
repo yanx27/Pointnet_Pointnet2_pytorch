@@ -5,7 +5,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 ## Update
 **2019/11/26:**
 
-(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.5\%! 
+(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.4\%! 
 
 (2) Added testing codes, including classification and segmentation, and semantic segmentation with visualization. 
 
@@ -60,7 +60,7 @@ Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stan
 cd data_utils
 python collect_indoor3d_data.py
 ```
-Prepared data will save in `data/S3DIS/stanford_indoor3d/`.
+Processed data will save in `data/S3DIS/stanford_indoor3d/`.
 ### Run
 ```
 ## Check model in ./models folder
