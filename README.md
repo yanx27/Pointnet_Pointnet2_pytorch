@@ -3,7 +3,13 @@
 This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf) and [PointNet++](http://papers.nips.cc/paper/7095-pointnet-deep-hierarchical-feature-learning-on-point-sets-in-a-metric-space.pdf) in pytorch.
 
 ## Update
-* 2019/11/26: (1). Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.5\%! (2). Added testing codes, including classification and segmentation, and semantic segmentation with visualization. (3). Organized all models into `./models` files for easy use.
+**2019/11/26:**
+
+(1). Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.5\%! 
+
+(2). Added testing codes, including classification and segmentation, and semantic segmentation with visualization. 
+
+(3). Organized all models into `./models` files for easy use.
 
 
 ## Classification
@@ -23,7 +29,6 @@ python test_cls.py --normal --log_dir pointnet2_cls_msg
 |--|--|
 | PointNet (Official) |  89.2|
 | PointNet++ (Official) | 91.9 |
-|--|--|
 | PointNet (Pytorch without normal) |  90.6|
 | PointNet (Pytorch with normal) |  91.4|
 | PointNet2_ssg (Pytorch without normal) |  92.2|
@@ -75,7 +80,7 @@ python show3d_balls.py
 ```
 ![](/visualizer/pic.png)
 ### Using MeshLab
-![](/pic/pic2.png)
+![](/visualizer/pic2.png)
 
 
 ## Reference By
