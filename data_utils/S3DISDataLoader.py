@@ -151,9 +151,6 @@ class S3DISDatasetWholeScene():
                 semantic_seg = cur_semantic_seg[choice] # N
                 mask = mask[choice]
 
-                if sum(mask)/float(len(mask))<0.01:
-                    continue
-
                 sample_weight = self.labelweights[semantic_seg]
                 sample_weight *= mask # N
                 point_sets.append(np.expand_dims(point_set,0)) # 1xNx3

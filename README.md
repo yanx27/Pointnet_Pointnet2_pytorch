@@ -98,3 +98,8 @@ python show3d_balls.py
 [fxia22/pointnet.pytorch](https://github.com/fxia22/pointnet.pytorch)<br>
 [charlesq34/PointNet](https://github.com/charlesq34/pointnet) <br>
 [charlesq34/PointNet++](https://github.com/charlesq34/pointnet2)
+
+## Environments
+Ubuntu 16.04 <br>
+Python 3.6.7 <br>
+Pytorch 1.1.0
