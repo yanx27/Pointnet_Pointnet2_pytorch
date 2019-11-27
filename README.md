@@ -5,7 +5,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 ## Update
 **2019/11/26:**
 
-(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification can achieve 92.4\%! 
+(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification by only 1024 points can achieve 92.8\%! 
 
 (2) Added testing codes, including classification and segmentation, and semantic segmentation with visualization. 
 
@@ -31,8 +31,9 @@ python test_cls.py --normal --log_dir pointnet2_cls_msg
 | PointNet2 (Official) | 91.9 |
 | PointNet (Pytorch without normal) |  90.6|
 | PointNet (Pytorch with normal) |  91.4|
-| PointNet2_ssg (Pytorch without normal) |  92.2|
-| PointNet2_ssg (Pytorch with normal) |  **92.4**|
+| PointNet2_SSG (Pytorch without normal) |  92.2|
+| PointNet2_SSG (Pytorch with normal) |  92.4|
+| PointNet2_MSG (Pytorch with normal) |  **92.8**|
 
 ## Part Segmentation
 ### Data Preparation
@@ -45,13 +46,13 @@ python train_partseg.py --model pointnet2_part_seg_msg --normal --log_dir pointn
 python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 ```
 ### Performance
-| Model | Inctance avg | Class avg	 
+| Model | Inctance avg IoU| Class avg IoU 
 |--|--|--|
 |PointNet (Official)	|83.7|80.4	
 |PointNet2 (Official)|85.1	|81.9	
-|PointNet (Pytorch)|	84.1	|80.7|	
-|PointNet2_ssg (Pytorch)|	-|	-	
-|PointNet2_msg (Pytorch)|	-|	-	
+|PointNet (Pytorch)|	84.3	|81.1|	
+|PointNet2_SSG (Pytorch)|	84.9|	81.8	
+|PointNet2_MSG (Pytorch)|	-|	-	
 
 
 ## Semantic Segmentation
@@ -71,7 +72,7 @@ python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5 --vis
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
 ### Performance (Area_5)
-|Model  | Mean IOU | 
+|Model  | Class avg IoU | 
 |--|--|
 | PointNet (Official) | 41.1|
 | PointNet (Pytorch) | 48.9|

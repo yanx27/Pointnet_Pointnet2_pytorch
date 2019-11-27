@@ -47,12 +47,13 @@ class S3DISDataset(Dataset):
     def __getitem__(self, index):
         if self.with_rgb:
             point_set = self.scene_points_list[index]
-            point_set[:,3:] = 2 * point_set[:,3:] / 255.0 - 1
+            point_set[:, 3:] = 2 * point_set[:, 3:] / 255.0 - 1
         else:
             point_set = self.scene_points_list[index][:, 0:3]
         semantic_seg = self.semantic_labels_list[index].astype(np.int32)
         coordmax = np.max(point_set[:, 0:3], axis=0)
         coordmin = np.min(point_set[:, 0:3], axis=0)
+        isvalid = False
         for i in range(10):
             curcenter = point_set[np.random.choice(len(semantic_seg), 1)[0], 0:3]
             curmin = curcenter - [self.block_size/2, self.block_size/2, 1.5]
@@ -66,13 +67,10 @@ class S3DISDataset(Dataset):
             cur_semantic_seg = semantic_seg[curchoice]
             if len(cur_semantic_seg) == 0:
                 continue
-
             mask = np.sum((cur_point_set >= (curmin - self.padding)) * (cur_point_set <= (curmax + self.padding)), axis=1) == 3
-            if sum(mask) / float(len(mask)) < 0.01:
-                continue
             vidx = np.ceil((cur_point_set[mask, :] - curmin) / (curmax - curmin) * [31.0, 31.0, 62.0])
             vidx = np.unique(vidx[:, 0] * 31.0 * 62.0 + vidx[:, 1] * 62.0 + vidx[:, 2])
-            isvalid = len(vidx) / 31.0 / 31.0 / 62.0 >= 0.02
+            isvalid =  len(vidx) / 31.0 / 31.0 / 62.0 >= 0.02
             if isvalid:
                 break
         choice = np.random.choice(len(cur_semantic_seg), self.npoints, replace=True)
