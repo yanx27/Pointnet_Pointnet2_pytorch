@@ -84,6 +84,7 @@ def main(args):
     log_string(args)
 
     root = 'data/stanford_indoor3d/'
+    
     NUM_CLASSES = 13
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
@@ -91,9 +92,12 @@ def main(args):
 
     print("start loading training data ...")
     TRAIN_DATASET = S3DISDataset(root, split='train', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
+    print("start loading test data ...")
+    TEST_DATASET = S3DISDataset(root, split='test', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
     print("start loading whole scene validation data ...")
     TEST_DATASET_WHOLE_SCENE = S3DISDatasetWholeScene(root, split='test', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,shuffle=True, num_workers=4)
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
     weights = TRAIN_DATASET.labelweights
     weights = torch.Tensor(weights).cuda()
 
@@ -107,7 +111,6 @@ def main(args):
 
     classifier = MODEL.get_model(NUM_CLASSES, with_rgb=args.with_rgb).cuda()
     criterion = MODEL.get_loss().cuda()
-
 
     def weights_init(m):
         classname = m.__class__.__name__
@@ -152,22 +155,23 @@ def main(args):
     best_iou = 0
 
     for epoch in range(start_epoch,args.epoch):
-        log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
-        '''Adjust learning rate and BN momentum'''
+        '''Train on chopped scenes'''
+        log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
         lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
-        mean_correct = []
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
         if momentum < 0.01:
             momentum = 0.01
         print('BN momentum updated to: %f' % momentum)
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x,momentum))
-
-        '''learning one epoch'''
+        num_batches = len(trainDataLoader)
+        total_correct = 0
+        total_seen = 0
+        loss_sum = 0
         for i, data in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
-            points, target, weight = data
+            points, target, _ = data
             points = points.data.numpy()
             points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
             points[:,:, 0:3] = provider.rotate_point_cloud_z(points[:,:, 0:3])
@@ -178,21 +182,61 @@ def main(args):
             classifier = classifier.train()
             seg_pred, trans_feat = classifier(points)
             seg_pred = seg_pred.contiguous().view(-1, NUM_CLASSES)
+            batch_label = target.view(-1, 1)[:, 0].cpu().data.numpy()
             target = target.view(-1, 1)[:, 0]
-            pred_choice = seg_pred.data.max(1)[1]
-            correct = pred_choice.eq(target.data).cpu().sum()
-            mean_correct.append(correct.item() / (args.batch_size * args.npoint))
             loss = criterion(seg_pred, target, trans_feat, weights)
             loss.backward()
             optimizer.step()
-        train_instance_acc = np.mean(mean_correct)
-        log_string('Train accuracy is: %.5f' % train_instance_acc)
+            pred_choice = seg_pred.cpu().data.max(1)[1].numpy()
+            correct = np.sum(pred_choice == batch_label)
+            total_correct += correct
+            total_seen += (BATCH_SIZE * NUM_POINT)
+            loss_sum += loss
+        log_string('Training mean loss: %f' % (loss_sum / num_batches))
+        log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
-        # evaluate on whole scenes, for each block, only sample NUM_POINT points
-        if epoch % 10 ==0:
+        if epoch % 10 == 0 and epoch < 800:
+            logger.info('Save model...')
+            savepath = str(checkpoints_dir) + '/best_model.pth'
+            log_string('Saving at %s' % savepath)
+            state = {
+                'epoch': epoch,
+                'model_state_dict': classifier.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }
+            torch.save(state, savepath)
+            log_string('Saving model....')
+
+        '''Evaluate on chopped scenes'''
+        with torch.no_grad():
+            num_batches = len(testDataLoader)
+            total_correct = 0
+            total_seen = 0
+            loss_sum = 0
+            log_string('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
+            for i, data in tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
+                points, target, _ = data
+                points, target = points.float().cuda(), target.long().cuda()
+                points = points.transpose(2, 1)
+                classifier = classifier.eval()
+                seg_pred, trans_feat = classifier(points)
+                seg_pred = seg_pred.contiguous().view(-1, NUM_CLASSES)
+                target = target.view(-1, 1)[:, 0]
+                loss = criterion(seg_pred, target, trans_feat, weights)
+                loss_sum += loss
+                batch_label = target.cpu().data.numpy()
+                pred_choice = seg_pred.cpu().data.max(1)[1].numpy()
+                correct = np.sum(pred_choice == batch_label)
+                total_correct += correct
+                total_seen += (BATCH_SIZE * NUM_POINT)
+            log_string('Eval mean loss: %f' % (loss_sum / num_batches))
+            log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
+
+        '''Evaluate on whole scenes'''
+        if epoch % 5 ==0 and epoch > 800:
             with torch.no_grad():
                 num_batches = len(TEST_DATASET_WHOLE_SCENE)
-
+                log_string('---- EPOCH %03d EVALUATION WHOLE SCENE----' % (global_epoch + 1))
                 total_correct = 0
                 total_seen = 0
                 loss_sum = 0
@@ -238,6 +282,7 @@ def main(args):
                     batch_data = torch.Tensor(batch_data)
                     batch_data, batch_label = batch_data.float().cuda(), batch_label.long().cuda()
                     batch_data = batch_data.transpose(2, 1)
+                    classifier = classifier.eval()
                     seg_pred, _ = classifier(batch_data)
                     seg_pred = seg_pred.contiguous()
                     batch_label = batch_label.cpu().data.numpy()
