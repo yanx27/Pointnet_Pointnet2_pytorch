@@ -52,7 +52,7 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 |PointNet2 (Official)|85.1	|81.9	
 |PointNet (Pytorch)|	84.3	|81.1|	
 |PointNet2_SSG (Pytorch)|	84.9|	81.8	
-|PointNet2_MSG (Pytorch)|	-|	-	
+|PointNet2_MSG (Pytorch)|	**85.4**|	**82.5**	
 
 
 ## Semantic Segmentation
