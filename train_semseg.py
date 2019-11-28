@@ -84,7 +84,7 @@ def main(args):
     log_string(args)
 
     root = 'data/stanford_indoor3d/'
-    
+
     NUM_CLASSES = 13
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
@@ -173,8 +173,9 @@ def main(args):
         for i, data in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
             points, target, _ = data
             points = points.data.numpy()
-            points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
-            points[:,:, 0:3] = provider.rotate_point_cloud_z(points[:,:, 0:3])
+            points[:, :, :3] = provider.normalize_data(points[:, :, :3])
+            points[:,:, :3] = provider.random_scale_point_cloud(points[:,:, :3])
+            points[:,:, :3] = provider.rotate_point_cloud_z(points[:,:, :3])
             points = torch.Tensor(points)
             points, target = points.float().cuda(),target.long().cuda()
             points = points.transpose(2, 1)
@@ -216,6 +217,9 @@ def main(args):
             log_string('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
             for i, data in tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
                 points, target, _ = data
+                points = points.data.numpy()
+                points[:, :, :3] = provider.normalize_data(points[:, :, :3])
+                points = torch.Tensor(points)
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)
                 classifier = classifier.eval()
@@ -278,6 +282,7 @@ def main(args):
                         batch_label = batch_label[:BATCH_SIZE, :]
                         batch_smpw = batch_smpw[:BATCH_SIZE, :]
 
+                    batch_data[:, :, :3] = provider.normalize_data(batch_data[:, :, :3])
                     batch_label = torch.Tensor(batch_label)
                     batch_data = torch.Tensor(batch_data)
                     batch_data, batch_label = batch_data.float().cuda(), batch_label.long().cuda()

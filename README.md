@@ -71,13 +71,13 @@ python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5 --log_
 python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5 --visual
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
-### Performance (Area_5)
+### Performance
 |Model  | Class avg IoU | 
 |--|--|
 | PointNet (Official) | 41.1|
 | PointNet (Pytorch) | 48.9|
 | PointNet2 (Official) |N/A | 
-| PointNet2_ssg (Pytorch) | 53.2|
+| PointNet2_ssg (Pytorch) | **53.2**|
 
 ## Visualization
 ### Using show3d_balls.py

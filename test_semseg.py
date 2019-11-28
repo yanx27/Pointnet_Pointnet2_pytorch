@@ -135,13 +135,12 @@ def main(args):
                     if WITH_RGB:
                         batch_data[:, :, 3:6] /= 1.0
 
-                    aug_data = batch_data
-                    aug_data[:, :, :3] = provider.rotate_point_cloud_z(aug_data[:, :, :3])
+                    batch_data[:, :, :3] = provider.normalize_data(batch_data[:, :, :3])
 
-                    aug_data = torch.Tensor(aug_data)
-                    aug_data= aug_data.float().cuda()
-                    aug_data = aug_data.transpose(2, 1)
-                    seg_pred, _ = classifier(aug_data)
+                    batch_data = torch.Tensor(batch_data)
+                    batch_data= batch_data.float().cuda()
+                    batch_data = batch_data.transpose(2, 1)
+                    seg_pred, _ = classifier(batch_data)
                     batch_pred_label = seg_pred.contiguous().cpu().data.max(2)[1].numpy()
 
                     vote_label_pool = add_vote(vote_label_pool, batch_point_index[0:real_batch_size, ...],
