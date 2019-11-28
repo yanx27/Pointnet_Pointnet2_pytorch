@@ -45,7 +45,7 @@ def parse_args():
     parser.add_argument('--log_dir', type=str, default=None, help='Log path [default: None]')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='weight decay [default: 1e-4]')
     parser.add_argument('--npoint', type=int,  default=2048, help='Point Number [default: 2048]')
-    parser.add_argument('--normal', action='store_true', default=False, help='Whether to use normal information [default: True]')
+    parser.add_argument('--normal', action='store_true', default=False, help='Whether to use normal information [default: False]')
     parser.add_argument('--step_size', type=int,  default=20, help='Decay step for lr decay [default: every 20 epochs]')
     parser.add_argument('--lr_decay', type=float,  default=0.5, help='Decay rate for lr decay [default: 0.5]')
 
