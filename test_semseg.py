@@ -29,7 +29,7 @@ for i,cat in enumerate(seg_classes.keys()):
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('Model')
-    parser.add_argument('--batch_size', type=int, default=12, help='batch size in testing [default: 12]')
+    parser.add_argument('--batch_size', type=int, default=16, help='batch size in testing [default: 16]')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--num_point', type=int, default=8192, help='Point Number [default: 1024]')
     parser.add_argument('--log_dir', type=str, default='pointnet2_ssg', help='Experiment root')
@@ -137,10 +137,10 @@ def main(args):
 
                     batch_data[:, :, :3] = provider.normalize_data(batch_data[:, :, :3])
 
-                    batch_data = torch.Tensor(batch_data)
-                    batch_data= batch_data.float().cuda()
-                    batch_data = batch_data.transpose(2, 1)
-                    seg_pred, _ = classifier(batch_data)
+                    torch_data = torch.Tensor(batch_data)
+                    torch_data= torch_data.float().cuda()
+                    torch_data = torch_data.transpose(2, 1)
+                    seg_pred, _ = classifier(torch_data)
                     batch_pred_label = seg_pred.contiguous().cpu().data.max(2)[1].numpy()
 
                     vote_label_pool = add_vote(vote_label_pool, batch_point_index[0:real_batch_size, ...],
