@@ -60,7 +60,7 @@ class S3DISDataset(Dataset):
             curmax = curcenter + [self.block_size/2, self.block_size/2, 1.5]
             curmin[2] = coordmin[2]
             curmax[2] = coordmax[2]
-            curchoice = np.sum((point_set[:, 0:3] >= (curmin - 0.2)) * (point_set[:, 0:3] <= (curmax + 0.2)),
+            curchoice = np.sum((point_set[:, 0:3] >= (curmin - self.padding)) * (point_set[:, 0:3] <= (curmax + self.padding)),
                                axis=1) == 3
             cur_point_set = point_set[curchoice, 0:3]
             cur_point_full = point_set[curchoice, :]
@@ -245,7 +245,7 @@ class ScannetDatasetWholeScene_evaluation():
                 curmin = coordmin + [i * delta, j * delta, 0]
                 curmax = curmin + [self.block_size, self.block_size, coordmax[2] - coordmin[2]]
                 curchoice = np.sum(
-                    (point_set_ini[:, 0:3] >= (curmin - 0.2)) * (point_set_ini[:, 0:3] <= (curmax + 0.2)), axis=1) == 3
+                    (point_set_ini[:, 0:3] >= (curmin - self.padding)) * (point_set_ini[:, 0:3] <= (curmax + self.padding)), axis=1) == 3
                 curchoice_idx = np.where(curchoice)[0]
                 cur_point_set = point_set_ini[curchoice, :]
                 cur_semantic_seg = semantic_seg_ini[curchoice]
