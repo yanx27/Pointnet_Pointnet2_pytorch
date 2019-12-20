@@ -96,8 +96,8 @@ def main(args):
     TEST_DATASET = S3DISDataset(root, split='test', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
     print("start loading whole scene validation data ...")
     TEST_DATASET_WHOLE_SCENE = S3DISDatasetWholeScene(root, split='test', with_rgb=args.with_rgb, test_area=args.test_area, block_points=NUM_POINT)
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, worker_init_fn = lambda x: np.random.seed(x+int(time.time())))
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, worker_init_fn = lambda x: np.random.seed(x+int(time.time())))
     weights = TRAIN_DATASET.labelweights
     weights = torch.Tensor(weights).cuda()
 
