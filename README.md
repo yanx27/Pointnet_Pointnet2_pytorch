@@ -67,17 +67,19 @@ Processed data will save in `data/stanford_indoor3d/`.
 ```
 ## Check model in ./models 
 ## E.g. pointnet2_ssg
-python train_semseg.py --model pointnet2_sem_seg --with_rgb --test_area 5 --log_dir pointnet2_sem_seg
-python test_semseg.py --with_rgb --log_dir pointnet2_sem_seg --test_area 5 --visual
+python train_semseg.py --model pointnet2_sem_seg --test_area 5 --log_dir pointnet2_sem_seg
+python test_semseg.py --log_dir pointnet2_sem_seg --test_area 5 --visual
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
-### Performance
+### Performance on sub-points of raw dataset (processed by official PointNet [Link](https://shapenet.cs.stanford.edu/media/indoor3d_sem_seg_hdf5_data.zip))
 |Model  | Class avg IoU | 
 |--|--|
 | PointNet (Official) | 41.1|
 | PointNet (Pytorch) | 48.9|
 | PointNet2 (Official) |N/A | 
 | PointNet2_ssg (Pytorch) | **53.2**|
+### Performance on raw dataset
+still on testing...
 
 ## Visualization
 ### Using show3d_balls.py

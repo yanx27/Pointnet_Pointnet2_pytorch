@@ -1,178 +1,90 @@
 import os
-import sys
 import numpy as np
 from torch.utils.data import Dataset
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(BASE_DIR)
-sys.path.append(BASE_DIR)
-sys.path.append(ROOT_DIR)
-
-# root = '../data/stanford_indoor3d/'
 
 class S3DISDataset(Dataset):
-    def __init__(self, root, block_points=8192, split='train', test_area=5, with_rgb=True, use_weight=True, block_size=1.5, padding=0.001):
-        self.npoints = block_points
+    def __init__(self, split='train', data_root='trainval_fullarea', num_point=4096, test_area=5, block_size=1.0, sample_rate=1.0, transform=None):
+        super().__init__()
+        self.num_point = num_point
         self.block_size = block_size
-        self.padding = padding
-        self.root = root
-        self.with_rgb = with_rgb
-        self.split = split
-        assert split in ['train','test']
-        if self.split == 'train':
-            self.file_list = [d for d in os.listdir(root) if d.find('Area_%d'%test_area) is -1]
+        self.transform = transform
+        rooms = sorted(os.listdir(data_root))
+        rooms = [room for room in rooms if 'Area_' in room]
+        if split == 'train':
+            rooms_split = [room for room in rooms if not 'Area_{}'.format(test_area) in room]
         else:
-            self.file_list = [d for d in os.listdir(root) if d.find('Area_%d'%test_area) is not -1]
-        self.scene_points_list = []
-        self.semantic_labels_list = []
-        for file in self.file_list:
-            data = np.load(root+file)
-            self.scene_points_list.append(data[:,:6])
-            self.semantic_labels_list.append(data[:,6])
-        assert len(self.scene_points_list)==len(self.semantic_labels_list)
-        print('Number of scene: ',len(self.scene_points_list))
-        if split=='train' and use_weight:
-            labelweights = np.zeros(13)
-            for seg in self.semantic_labels_list:
-                tmp,_ = np.histogram(seg,range(14))
-                labelweights += tmp
-            labelweights = labelweights.astype(np.float32)
-            labelweights = labelweights/np.sum(labelweights)
-            self.labelweights = np.power(np.amax(labelweights) / labelweights, 1/3.0)
-        else:
-            self.labelweights = np.ones(13)
-
+            rooms_split = [room for room in rooms if 'Area_{}'.format(test_area) in room]
+        self.room_points, self.room_labels = [], []
+        self.room_coord_min, self.room_coord_max = [], []
+        num_point_all = []
+        labelweights = np.zeros(13)
+        for room_name in rooms_split:
+            room_path = os.path.join(data_root, room_name)
+            room_data = np.load(room_path)  # xyzrgbl, N*7
+            points, labels = room_data[:, 0:6], room_data[:, 6]  # xyzrgb, N*6; l, N
+            tmp, _ = np.histogram(labels, range(14))
+            labelweights += tmp
+            coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
+            self.room_points.append(points), self.room_labels.append(labels)
+            self.room_coord_min.append(coord_min), self.room_coord_max.append(coord_max)
+            num_point_all.append(labels.size)
+        labelweights = labelweights.astype(np.float32)
+        labelweights = labelweights / np.sum(labelweights)
+        self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
         print(self.labelweights)
+        sample_prob = num_point_all / np.sum(num_point_all)
+        num_iter = int(np.sum(num_point_all) * sample_rate / num_point)
+        room_idxs = []
+        for index in range(len(rooms_split)):
+            room_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))
+        self.room_idxs = np.array(room_idxs)
+        print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
-    def __getitem__(self, index):
-        if self.with_rgb:
-            point_set = self.scene_points_list[index]
-            point_set[:, 3:] = 2 * point_set[:, 3:] / 255.0 - 1
-        else:
-            point_set = self.scene_points_list[index][:, 0:3]
-        semantic_seg = self.semantic_labels_list[index].astype(np.int32)
-        coordmax = np.max(point_set[:, 0:3], axis=0)
-        coordmin = np.min(point_set[:, 0:3], axis=0)
-        isvalid = False
-        for i in range(10):
-            curcenter = point_set[np.random.choice(len(semantic_seg), 1)[0], 0:3]
-            curmin = curcenter - [self.block_size/2, self.block_size/2, 1.5]
-            curmax = curcenter + [self.block_size/2, self.block_size/2, 1.5]
-            curmin[2] = coordmin[2]
-            curmax[2] = coordmax[2]
-            curchoice = np.sum((point_set[:, 0:3] >= (curmin - self.padding)) * (point_set[:, 0:3] <= (curmax + self.padding)),
-                               axis=1) == 3
-            cur_point_set = point_set[curchoice, 0:3]
-            cur_point_full = point_set[curchoice, :]
-            cur_semantic_seg = semantic_seg[curchoice]
-            if len(cur_semantic_seg) == 0:
-                continue
-            mask = np.sum((cur_point_set >= (curmin - self.padding)) * (cur_point_set <= (curmax + self.padding)), axis=1) == 3
-            vidx = np.ceil((cur_point_set[mask, :] - curmin) / (curmax - curmin) * [31.0, 31.0, 62.0])
-            vidx = np.unique(vidx[:, 0] * 31.0 * 62.0 + vidx[:, 1] * 62.0 + vidx[:, 2])
-            isvalid =  len(vidx) / 31.0 / 31.0 / 62.0 >= 0.02
-            if isvalid:
+    def __getitem__(self, idx):
+        room_idx = self.room_idxs[idx]
+        points = self.room_points[room_idx]   # N * 6
+        labels = self.room_labels[room_idx]   # N
+        N_points = points.shape[0]
+
+        while (True):
+            center = points[np.random.choice(N_points)][:3]
+            block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
+            block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
+            point_idxs = np.where((points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (points[:, 1] <= block_max[1]))[0]
+            if point_idxs.size > 1024:
                 break
-        choice = np.random.choice(len(cur_semantic_seg), self.npoints, replace=True)
-        point_set = cur_point_full[choice, :]
-        semantic_seg = cur_semantic_seg[choice]
-        mask = mask[choice]
-        sample_weight = self.labelweights[semantic_seg]
-        sample_weight *= mask
-        return point_set, semantic_seg, sample_weight
+
+        if point_idxs.size >= self.num_point:
+            selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
+        else:
+            selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=True)
+
+        # normalize
+        selected_points = points[selected_point_idxs, :]  # num_point * 6
+        current_points = np.zeros((self.num_point, 9))  # num_point * 9
+        current_points[:, 6] = selected_points[:, 0] / self.room_coord_max[room_idx][0]
+        current_points[:, 7] = selected_points[:, 1] / self.room_coord_max[room_idx][1]
+        current_points[:, 8] = selected_points[:, 2] / self.room_coord_max[room_idx][2]
+        selected_points[:, 0] = selected_points[:, 0] - center[0]
+        selected_points[:, 1] = selected_points[:, 1] - center[1]
+        selected_points[:, 3:6] /= 255.0
+        current_points[:, 0:6] = selected_points
+        current_labels = labels[selected_point_idxs]
+        if self.transform is not None:
+            current_points, current_labels = self.transform(current_points, current_labels)
+        return current_points, current_labels
 
     def __len__(self):
-        return len(self.scene_points_list)
+        return len(self.room_idxs)
 
-
-class S3DISDatasetWholeScene():
-    def __init__(self, root, block_points=8192, split='val', test_area=5, with_rgb = True, use_weight = True, block_size=1.5, stride=1.5, padding=0.001):
-        self.npoints = block_points
-        self.block_size = block_size
-        self.padding = padding
-        self.stride = stride
-        self.root = root
-        self.with_rgb = with_rgb
-        self.split = split
-        assert split in ['train', 'test']
-        if self.split == 'train':
-            self.file_list = [d for d in os.listdir(root) if d.find('Area_%d' % test_area) is -1]
-        else:
-            self.file_list = [d for d in os.listdir(root) if d.find('Area_%d' % test_area) is not -1]
-        self.scene_points_list = []
-        self.semantic_labels_list = []
-        for file in self.file_list:
-            data = np.load(root + file)
-            self.scene_points_list.append(data[:, :6])
-            self.semantic_labels_list.append(data[:, 6])
-        assert len(self.scene_points_list) == len(self.semantic_labels_list)
-        print('Number of scene: ', len(self.scene_points_list))
-        if split == 'train' and use_weight:
-            labelweights = np.zeros(13)
-            for seg in self.semantic_labels_list:
-                tmp, _ = np.histogram(seg, range(14))
-                labelweights += tmp
-            labelweights = labelweights.astype(np.float32)
-            labelweights = labelweights / np.sum(labelweights)
-            self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
-        else:
-            self.labelweights = np.ones(13)
-
-        print(self.labelweights)
-
-    def __getitem__(self, index):
-        if self.with_rgb:
-            point_set_ini = self.scene_points_list[index]
-            point_set_ini[:, 3:] = 2 * point_set_ini[:, 3:] / 255.0 - 1
-        else:
-            point_set_ini = self.scene_points_list[index][:, 0:3]
-        semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
-        coordmax = np.max(point_set_ini[:, 0:3],axis=0)
-        coordmin = np.min(point_set_ini[:, 0:3],axis=0)
-        nsubvolume_x = np.ceil((coordmax[0]-coordmin[0])/self.block_size).astype(np.int32)
-        nsubvolume_y = np.ceil((coordmax[1]-coordmin[1])/self.block_size).astype(np.int32)
-        point_sets = list()
-        semantic_segs = list()
-        sample_weights = list()
-        for i in range(nsubvolume_x):
-            for j in range(nsubvolume_y):
-                curmin = coordmin+[i*self.block_size,j*self.block_size,0]
-                curmax = coordmin+[(i+1)*self.block_size,(j+1)*self.block_size,coordmax[2]-coordmin[2]]
-                curchoice = np.sum((point_set_ini[:, 0:3]>=(curmin-0.2))*(point_set_ini[:, 0:3]<=(curmax+0.2)),axis=1)==3
-                cur_point_set = point_set_ini[curchoice,0:3]
-                cur_point_full = point_set_ini[curchoice,:]
-                cur_semantic_seg = semantic_seg_ini[curchoice]
-                if len(cur_semantic_seg)==0:
-                    continue
-                mask = np.sum((cur_point_set >= (curmin - self.padding)) * (cur_point_set <= (curmax + self.padding)),
-                              axis=1) == 3
-                choice = np.random.choice(len(cur_semantic_seg), self.npoints, replace=True)
-                point_set = cur_point_full[choice,:] # Nx3/6
-                semantic_seg = cur_semantic_seg[choice] # N
-                mask = mask[choice]
-
-                sample_weight = self.labelweights[semantic_seg]
-                sample_weight *= mask # N
-                point_sets.append(np.expand_dims(point_set,0)) # 1xNx3
-                semantic_segs.append(np.expand_dims(semantic_seg,0)) # 1xN
-                sample_weights.append(np.expand_dims(sample_weight,0)) # 1xN
-        point_sets = np.concatenate(tuple(point_sets),axis=0)
-        semantic_segs = np.concatenate(tuple(semantic_segs),axis=0)
-        sample_weights = np.concatenate(tuple(sample_weights),axis=0)
-        return point_sets, semantic_segs, sample_weights
-
-    def __len__(self):
-        return len(self.scene_points_list)
-
-
-class ScannetDatasetWholeScene_evaluation():
+class ScannetDatasetWholeScene():
     # prepare to give prediction on each points
-    def __init__(self, root, block_points=8192, split='test', test_area=5, with_rgb = True, use_weight = True, stride=0.5, block_size=1.5, padding=0.001):
+    def __init__(self, root, block_points=4096, split='test', test_area=5, stride=0.5, block_size=1.0, padding=0.001):
         self.block_points = block_points
         self.block_size = block_size
         self.padding = padding
         self.root = root
-        self.with_rgb = with_rgb
         self.split = split
         self.stride = stride
         self.scene_points_num = []
@@ -183,150 +95,96 @@ class ScannetDatasetWholeScene_evaluation():
             self.file_list = [d for d in os.listdir(root) if d.find('Area_%d' % test_area) is not -1]
         self.scene_points_list = []
         self.semantic_labels_list = []
+        self.room_coord_min, self.room_coord_max = [], []
         for file in self.file_list:
             data = np.load(root + file)
+            points = data[:, :3]
             self.scene_points_list.append(data[:, :6])
             self.semantic_labels_list.append(data[:, 6])
+            coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
+            self.room_coord_min.append(coord_min), self.room_coord_max.append(coord_max)
         assert len(self.scene_points_list) == len(self.semantic_labels_list)
-        print('Number of scene: ', len(self.scene_points_list))
-        if split == 'train' and use_weight:
-            labelweights = np.zeros(13)
-            for seg in self.semantic_labels_list:
-                tmp, _ = np.histogram(seg, range(14))
-                self.scene_points_num.append(seg.shape[0])
-                labelweights += tmp
-            labelweights = labelweights.astype(np.float32)
-            labelweights = labelweights / np.sum(labelweights)
-            self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
-        else:
-            self.labelweights = np.ones(13)
-            for seg in self.semantic_labels_list:
-                self.scene_points_num.append(seg.shape[0])
 
-        print(self.labelweights)
-
-    def chunks(self, l, n):
-        """Yield successive n-sized chunks from l."""
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
-
-    def split_data(self, data, idx):
-        new_data = []
-        for i in range(len(idx)):
-            new_data += [np.expand_dims(data[idx[i]], axis=0)]
-        return new_data
-
-    def nearest_dist(self, block_center, block_center_list):
-        num_blocks = len(block_center_list)
-        dist = np.zeros(num_blocks)
-        for i in range(num_blocks):
-            dist[i] = np.linalg.norm(block_center_list[i] - block_center, ord=2)  # i->j
-        return np.argsort(dist)[0]
+        labelweights = np.zeros(13)
+        for seg in self.semantic_labels_list:
+            tmp, _ = np.histogram(seg, range(14))
+            self.scene_points_num.append(seg.shape[0])
+            labelweights += tmp
+        labelweights = labelweights.astype(np.float32)
+        labelweights = labelweights / np.sum(labelweights)
+        self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
 
     def __getitem__(self, index):
-        delta = self.stride
-        if self.with_rgb:
-            point_set_ini = self.scene_points_list[index]
-            point_set_ini[:, 3:] = 2 * point_set_ini[:, 3:] / 255.0 - 1
-        else:
-            point_set_ini = self.scene_points_list[index][:, 0:3]
-        semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
-        coordmax = np.max(point_set_ini[:, 0:3], axis=0)
-        coordmin = np.min(point_set_ini[:, 0:3], axis=0)
-        nsubvolume_x = np.ceil((coordmax[0] - coordmin[0]) / delta).astype(np.int32)
-        nsubvolume_y = np.ceil((coordmax[1] - coordmin[1]) / delta).astype(np.int32)
-        point_sets = []
-        semantic_segs = []
-        sample_weights = []
-        point_idxs = []
-        block_center = []
-        for i in range(nsubvolume_x):
-            for j in range(nsubvolume_y):
-                curmin = coordmin + [i * delta, j * delta, 0]
-                curmax = curmin + [self.block_size, self.block_size, coordmax[2] - coordmin[2]]
-                curchoice = np.sum(
-                    (point_set_ini[:, 0:3] >= (curmin - self.padding)) * (point_set_ini[:, 0:3] <= (curmax + self.padding)), axis=1) == 3
-                curchoice_idx = np.where(curchoice)[0]
-                cur_point_set = point_set_ini[curchoice, :]
-                cur_semantic_seg = semantic_seg_ini[curchoice]
-                if len(cur_semantic_seg) == 0:
+        point_set_ini = self.scene_points_list[index]
+        points = point_set_ini[:,:6]
+        labels = self.semantic_labels_list[index]
+        coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
+        grid_x = int(np.ceil(float(coord_max[0] - coord_min[0] - self.block_size) / self.stride) + 1)
+        grid_y = int(np.ceil(float(coord_max[1] - coord_min[1] - self.block_size) / self.stride) + 1)
+        data_room, label_room, sample_weight, index_room = np.array([]), np.array([]), np.array([]),  np.array([])
+        for index_y in range(0, grid_y):
+            for index_x in range(0, grid_x):
+                s_x = coord_min[0] + index_x * self.stride
+                e_x = min(s_x + self.block_size, coord_max[0])
+                s_x = e_x - self.block_size
+                s_y = coord_min[1] + index_y * self.stride
+                e_y = min(s_y + self.block_size, coord_max[1])
+                s_y = e_y - self.block_size
+                point_idxs = np.where(
+                    (points[:, 0] >= s_x - self.padding) & (points[:, 0] <= e_x + self.padding) & (points[:, 1] >= s_y - self.padding) & (
+                                points[:, 1] <= e_y + self.padding))[0]
+                if point_idxs.size == 0:
                     continue
-                mask = np.sum((cur_point_set[:, 0:3] >= (curmin - self.padding)) * (cur_point_set[:, 0:3] <= (curmax + self.padding)),
-                              axis=1) == 3
-                sample_weight = self.labelweights[cur_semantic_seg]
-                sample_weight *= mask  # N
-                point_sets.append(cur_point_set)  # 1xNx3/6
-                semantic_segs.append(cur_semantic_seg)  # 1xN
-                sample_weights.append(sample_weight)  # 1xN
-                point_idxs.append(curchoice_idx)  # 1xN
-                block_center.append((curmin[0:2] + curmax[0:2]) / 2.0)
+                num_batch = int(np.ceil(point_idxs.size / self.block_points))
+                point_size = int(num_batch * self.block_points)
+                replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
+                point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
+                point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
+                np.random.shuffle(point_idxs)
+                data_batch = points[point_idxs, :]
+                normlized_xyz = np.zeros((point_size, 3))
+                normlized_xyz[:, 0] = data_batch[:, 0] / coord_max[0]
+                normlized_xyz[:, 1] = data_batch[:, 1] / coord_max[1]
+                normlized_xyz[:, 2] = data_batch[:, 2] / coord_max[2]
+                data_batch[:, 0] = data_batch[:, 0] - (s_x + self.block_size / 2.0)
+                data_batch[:, 1] = data_batch[:, 1] - (s_y + self.block_size / 2.0)
+                data_batch[:, 3:6] /= 255.0
+                data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
+                label_batch = labels[point_idxs].astype(int)
+                batch_weight = self.labelweights[label_batch]
 
-        # merge small blocks
-        num_blocks = len(point_sets)
-        block_idx = 0
-        while block_idx < num_blocks:
-            if point_sets[block_idx].shape[0] > self.block_points/2:
-                block_idx += 1
-                continue
-
-            small_block_data = point_sets[block_idx].copy()
-            small_block_seg = semantic_segs[block_idx].copy()
-            small_block_smpw = sample_weights[block_idx].copy()
-            small_block_idxs = point_idxs[block_idx].copy()
-            small_block_center = block_center[block_idx].copy()
-            point_sets.pop(block_idx)
-            semantic_segs.pop(block_idx)
-            sample_weights.pop(block_idx)
-            point_idxs.pop(block_idx)
-            block_center.pop(block_idx)
-            nearest_block_idx = self.nearest_dist(small_block_center, block_center)
-            point_sets[nearest_block_idx] = np.concatenate((point_sets[nearest_block_idx], small_block_data), axis=0)
-            semantic_segs[nearest_block_idx] = np.concatenate((semantic_segs[nearest_block_idx], small_block_seg),
-                                                              axis=0)
-            sample_weights[nearest_block_idx] = np.concatenate((sample_weights[nearest_block_idx], small_block_smpw),
-                                                               axis=0)
-            point_idxs[nearest_block_idx] = np.concatenate((point_idxs[nearest_block_idx], small_block_idxs), axis=0)
-            num_blocks = len(point_sets)
-
-        # divide large blocks
-        num_blocks = len(point_sets)
-        div_blocks = []
-        div_blocks_seg = []
-        div_blocks_smpw = []
-        div_blocks_idxs = []
-        div_blocks_center = []
-        for block_idx in range(num_blocks):
-            cur_num_pts = point_sets[block_idx].shape[0]
-
-            point_idx_block = np.array([x for x in range(cur_num_pts)])
-            if point_idx_block.shape[0] % self.block_points != 0:
-                makeup_num = self.block_points - point_idx_block.shape[0] % self.block_points
-                np.random.shuffle(point_idx_block)
-                point_idx_block = np.concatenate((point_idx_block, point_idx_block[0:makeup_num].copy()))
-
-            np.random.shuffle(point_idx_block)
-
-            sub_blocks = list(self.chunks(point_idx_block, self.block_points))
-
-            div_blocks += self.split_data(point_sets[block_idx], sub_blocks)
-            div_blocks_seg += self.split_data(semantic_segs[block_idx], sub_blocks)
-            div_blocks_smpw += self.split_data(sample_weights[block_idx], sub_blocks)
-            div_blocks_idxs += self.split_data(point_idxs[block_idx], sub_blocks)
-            div_blocks_center += [block_center[block_idx].copy() for i in range(len(sub_blocks))]
-        div_blocks = np.concatenate(tuple(div_blocks), axis=0)
-        div_blocks_seg = np.concatenate(tuple(div_blocks_seg), axis=0)
-        div_blocks_smpw = np.concatenate(tuple(div_blocks_smpw), axis=0)
-        div_blocks_idxs = np.concatenate(tuple(div_blocks_idxs), axis=0)
-        return div_blocks, div_blocks_seg, div_blocks_smpw, div_blocks_idxs
+                data_room = np.vstack([data_room, data_batch]) if data_room.size else data_batch
+                label_room = np.hstack([label_room, label_batch]) if label_room.size else label_batch
+                sample_weight = np.hstack([sample_weight, batch_weight]) if label_room.size else batch_weight
+                index_room = np.hstack([index_room, point_idxs]) if index_room.size else point_idxs
+        data_room = data_room.reshape((-1, self.block_points, data_room.shape[1]))
+        label_room = label_room.reshape((-1, self.block_points))
+        sample_weight = sample_weight.reshape((-1, self.block_points))
+        index_room = index_room.reshape((-1, self.block_points))
+        return data_room, label_room, sample_weight, index_room
 
     def __len__(self):
         return len(self.scene_points_list)
 
 if __name__ == '__main__':
-    data = S3DISDatasetWholeScene(split='test')
-    for i in range(10):
-        point_set, semantic_seg, sample_weight= data[i]
-        print(point_set.shape)
-        print(semantic_seg.shape)
-        print(sample_weight.shape)
+    data_root = '/data/yxu/PointNonLocal/data/stanford_indoor3d/'
+    num_point, test_area, block_size, sample_rate = 4096, 5, 1.0, 0.01
 
+    point_data = S3DISDataset(split='train', data_root=data_root, num_point=num_point, test_area=test_area, block_size=block_size, sample_rate=sample_rate, transform=None)
+    print('point data size:', point_data.__len__())
+    print('point data 0 shape:', point_data.__getitem__(0)[0].shape)
+    print('point label 0 shape:', point_data.__getitem__(0)[1].shape)
+    import torch, time, random
+    manual_seed = 123
+    random.seed(manual_seed)
+    np.random.seed(manual_seed)
+    torch.manual_seed(manual_seed)
+    torch.cuda.manual_seed_all(manual_seed)
+    def worker_init_fn(worker_id):
+        random.seed(manual_seed + worker_id)
+    train_loader = torch.utils.data.DataLoader(point_data, batch_size=16, shuffle=True, num_workers=16, pin_memory=True, worker_init_fn=worker_init_fn)
+    for idx in range(4):
+        end = time.time()
+        for i, (input, target) in enumerate(train_loader):
+            print('time: {}/{}--{}'.format(i+1, len(train_loader), time.time() - end))
+            end = time.time()

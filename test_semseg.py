@@ -4,7 +4,7 @@ Date: Nov 2019
 """
 import argparse
 import os
-from data_utils.S3DISDataLoader import ScannetDatasetWholeScene_evaluation
+from data_utils.S3DISDataLoader import ScannetDatasetWholeScene
 from data_utils.indoor3d_util import g_label2color
 import torch
 import logging
@@ -29,14 +29,13 @@ for i,cat in enumerate(seg_classes.keys()):
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('Model')
-    parser.add_argument('--batch_size', type=int, default=16, help='batch size in testing [default: 16]')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch size in testing [default: 32]')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--num_point', type=int, default=8192, help='Point Number [default: 1024]')
-    parser.add_argument('--log_dir', type=str, default='pointnet2_ssg', help='Experiment root')
-    parser.add_argument('--with_rgb', action='store_true', default=False, help='Whether to use RGB information [default: False]')
+    parser.add_argument('--num_point', type=int, default=4096, help='Point Number [default: 4096]')
+    parser.add_argument('--log_dir', type=str, default='pointnet2_sem_seg', help='Experiment root')
     parser.add_argument('--visual', action='store_true', default=False, help='Whether visualize result [default: False]')
     parser.add_argument('--test_area', type=int, default=5, help='Which area to use for test, option: 1-6 [default: 5]')
-    parser.add_argument('--num_votes', type=int, default=3, help='Aggregate segmentation scores with voting [default: 3]')
+    parser.add_argument('--num_votes', type=int, default=5, help='Aggregate segmentation scores with voting [default: 5]')
     return parser.parse_args()
 
 def add_vote(vote_label_pool, point_idx, pred_label, weight):
@@ -73,19 +72,18 @@ def main(args):
     log_string(args)
 
     NUM_CLASSES = 13
-    WITH_RGB = args.with_rgb
     BATCH_SIZE = args.batch_size
     NUM_POINT = args.num_point
 
     root = 'data/stanford_indoor3d/'
 
-    TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene_evaluation(root, split='test', with_rgb=WITH_RGB, test_area=args.test_area, block_points=NUM_POINT)
+    TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene(root, split='test', test_area=args.test_area, block_points=NUM_POINT)
     log_string("The number of test data is: %d" %  len(TEST_DATASET_WHOLE_SCENE))
 
     '''MODEL LOADING'''
     model_name = os.listdir(experiment_dir+'/logs')[0].split('.')[0]
     MODEL = importlib.import_module(model_name)
-    classifier = MODEL.get_model(NUM_CLASSES, with_rgb=WITH_RGB).cuda()
+    classifier = MODEL.get_model(NUM_CLASSES).cuda()
     checkpoint = torch.load(str(experiment_dir) + '/checkpoints/best_model.pth')
     classifier.load_state_dict(checkpoint['model_state_dict'])
 
@@ -101,7 +99,7 @@ def main(args):
         log_string('---- EVALUATION WHOLE SCENE----')
 
         for batch_idx in range(num_batches):
-            print("visualize %d %s ..." % (batch_idx, scene_id[batch_idx]))
+            print("visualize [%d/%d] %s ..." % (batch_idx+1, num_batches, scene_id[batch_idx]))
             total_seen_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_correct_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_iou_deno_class_tmp = [0 for _ in range(NUM_CLASSES)]
@@ -116,10 +114,8 @@ def main(args):
                 scene_data, scene_label, scene_smpw, scene_point_index = TEST_DATASET_WHOLE_SCENE[batch_idx]
                 num_blocks = scene_data.shape[0]
                 s_batch_num = (num_blocks + BATCH_SIZE - 1) // BATCH_SIZE
-                if WITH_RGB:
-                    batch_data = np.zeros((BATCH_SIZE, NUM_POINT, 6))
-                else:
-                    batch_data = np.zeros((BATCH_SIZE, NUM_POINT, 3))
+                batch_data = np.zeros((BATCH_SIZE, NUM_POINT, 9))
+
                 batch_label = np.zeros((BATCH_SIZE, NUM_POINT))
                 batch_point_index = np.zeros((BATCH_SIZE, NUM_POINT))
                 batch_smpw = np.zeros((BATCH_SIZE, NUM_POINT))
@@ -131,11 +127,7 @@ def main(args):
                     batch_label[0:real_batch_size, ...] = scene_label[start_idx:end_idx, ...]
                     batch_point_index[0:real_batch_size, ...] = scene_point_index[start_idx:end_idx, ...]
                     batch_smpw[0:real_batch_size, ...] = scene_smpw[start_idx:end_idx, ...]
-
-                    if WITH_RGB:
-                        batch_data[:, :, 3:6] /= 1.0
-
-                    batch_data[:, :, :3] = provider.normalize_data(batch_data[:, :, :3])
+                    batch_data[:, :, 3:6] /= 1.0
 
                     torch_data = torch.Tensor(batch_data)
                     torch_data= torch_data.float().cuda()
