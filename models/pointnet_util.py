@@ -122,10 +122,16 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
     B, N, C = xyz.shape
     S = npoint
     fps_idx = farthest_point_sample(xyz, npoint) # [B, npoint, C]
+    torch.cuda.empty_cache()
     new_xyz = index_points(xyz, fps_idx)
+    torch.cuda.empty_cache()
     idx = query_ball_point(radius, nsample, xyz, new_xyz)
+    torch.cuda.empty_cache()
     grouped_xyz = index_points(xyz, idx) # [B, npoint, nsample, C]
+    torch.cuda.empty_cache()
     grouped_xyz_norm = grouped_xyz - new_xyz.view(B, S, 1, C)
+    torch.cuda.empty_cache()
+
     if points is not None:
         grouped_points = index_points(points, idx)
         new_points = torch.cat([grouped_xyz_norm, grouped_points], dim=-1) # [B, npoint, nsample, C+D]
