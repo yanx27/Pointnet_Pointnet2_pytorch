@@ -4,14 +4,9 @@ from models.pointnet_util import PointNetSetAbstraction,PointNetFeaturePropagati
 
 
 class get_model(nn.Module):
-    def __init__(self, num_classes, with_rgb=True):
+    def __init__(self, num_classes):
         super(get_model, self).__init__()
-        self.with_rgb = with_rgb
-        if with_rgb:
-            additional_channel = 3
-        else:
-            additional_channel = 0
-        self.sa1 = PointNetSetAbstraction(1024, 0.1, 32, 6 + additional_channel, [32, 32, 64], False)
+        self.sa1 = PointNetSetAbstraction(1024, 0.1, 32, 9 + 3, [32, 32, 64], False)
         self.sa2 = PointNetSetAbstraction(256, 0.2, 32, 64 + 3, [64, 64, 128], False)
         self.sa3 = PointNetSetAbstraction(64, 0.4, 32, 128 + 3, [128, 128, 256], False)
         self.sa4 = PointNetSetAbstraction(16, 0.8, 32, 256 + 3, [256, 256, 512], False)
@@ -25,12 +20,9 @@ class get_model(nn.Module):
         self.conv2 = nn.Conv1d(128, num_classes, 1)
 
     def forward(self, xyz):
-        if self.with_rgb:
-            l0_points = xyz
-            l0_xyz = xyz[:,:3,:]
-        else:
-            l0_points = xyz
-            l0_xyz = xyz
+        l0_points = xyz
+        l0_xyz = xyz[:,:3,:]
+
         l1_xyz, l1_points = self.sa1(l0_xyz, l0_points)
         l2_xyz, l2_points = self.sa2(l1_xyz, l1_points)
         l3_xyz, l3_points = self.sa3(l2_xyz, l2_points)
@@ -58,6 +50,6 @@ class get_loss(nn.Module):
 
 if __name__ == '__main__':
     import  torch
-    model = get_model(13, with_rgb=True)
-    xyz = torch.rand(6, 6, 2048)
+    model = get_model(13)
+    xyz = torch.rand(6, 9, 2048)
     (model(xyz))
