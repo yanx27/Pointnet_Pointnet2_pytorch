@@ -11,7 +11,23 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 
 (3) Organized all models into `./models` files for easy using.
 
-
+If you find this repo useful in your research, please consider following and citing our other works:
+```
+@InProceedings{yan2020pointasnl,
+  title={PointASNL: Robust Point Clouds Processing using Nonlocal Neural Networks with Adaptive Sampling},
+  author={Yan, Xu and Zheng, Chaoda and Li, Zhen and Wang, Sheng and Cui, Shuguang},
+  journal={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
+  year={2020}
+}
+```
+```
+@InProceedings{yan2021sparse,
+  title={Sparse Single Sweep LiDAR Point Cloud Segmentation via Learning Contextual Shape Priors from Scene Completion},
+  author={Yan, Xu and Gao, Jiantao and Li, Jie and Zhang, Ruimao, and Li, Zhen and Huang, Rui and Cui, Shuguang},
+  journal={AAAI Conference on Artificial Intelligence ({AAAI})},
+  year={2021}
+}
+```
 ## Classification
 ### Data Preparation
 Download alignment **ModelNet** [here](https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip) and save in `data/modelnet40_normal_resampled/`.
