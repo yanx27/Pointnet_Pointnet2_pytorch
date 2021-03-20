@@ -1,5 +1,7 @@
 import os
 import numpy as np
+
+from tqdm import tqdm
 from torch.utils.data import Dataset
 
 
@@ -15,11 +17,13 @@ class S3DISDataset(Dataset):
             rooms_split = [room for room in rooms if not 'Area_{}'.format(test_area) in room]
         else:
             rooms_split = [room for room in rooms if 'Area_{}'.format(test_area) in room]
+
         self.room_points, self.room_labels = [], []
         self.room_coord_min, self.room_coord_max = [], []
         num_point_all = []
         labelweights = np.zeros(13)
-        for room_name in rooms_split:
+
+        for room_name in tqdm(rooms_split, total=len(rooms_split)):
             room_path = os.path.join(data_root, room_name)
             room_data = np.load(room_path)  # xyzrgbl, N*7
             points, labels = room_data[:, 0:6], room_data[:, 6]  # xyzrgb, N*6; l, N

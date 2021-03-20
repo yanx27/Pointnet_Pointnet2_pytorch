@@ -19,12 +19,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
-classes = ['ceiling','floor','wall','beam','column','window','door','table','chair','sofa','bookcase','board','clutter']
-class2label = {cls: i for i,cls in enumerate(classes)}
+classes = ['ceiling', 'floor', 'wall', 'beam', 'column', 'window', 'door', 'table', 'chair', 'sofa', 'bookcase',
+           'board', 'clutter']
+class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
-for i,cat in enumerate(seg_classes.keys()):
+for i, cat in enumerate(seg_classes.keys()):
     seg_label_to_cat[i] = cat
+
 
 def parse_args():
     '''PARAMETERS'''
@@ -38,14 +40,16 @@ def parse_args():
     parser.add_argument('--num_votes', type=int, default=5, help='Aggregate segmentation scores with voting [default: 5]')
     return parser.parse_args()
 
+
 def add_vote(vote_label_pool, point_idx, pred_label, weight):
     B = pred_label.shape[0]
     N = pred_label.shape[1]
     for b in range(B):
         for n in range(N):
-            if weight[b,n]:
+            if weight[b, n]:
                 vote_label_pool[int(point_idx[b, n]), int(pred_label[b, n])] += 1
     return vote_label_pool
+
 
 def main(args):
     def log_string(str):
@@ -75,17 +79,18 @@ def main(args):
     BATCH_SIZE = args.batch_size
     NUM_POINT = args.num_point
 
-    root = 'data/stanford_indoor3d/'
+    root = 'data/s3dis/stanford_indoor3d/'
 
     TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene(root, split='test', test_area=args.test_area, block_points=NUM_POINT)
-    log_string("The number of test data is: %d" %  len(TEST_DATASET_WHOLE_SCENE))
+    log_string("The number of test data is: %d" % len(TEST_DATASET_WHOLE_SCENE))
 
     '''MODEL LOADING'''
-    model_name = os.listdir(experiment_dir+'/logs')[0].split('.')[0]
+    model_name = os.listdir(experiment_dir + '/logs')[0].split('.')[0]
     MODEL = importlib.import_module(model_name)
     classifier = MODEL.get_model(NUM_CLASSES).cuda()
     checkpoint = torch.load(str(experiment_dir) + '/checkpoints/best_model.pth')
     classifier.load_state_dict(checkpoint['model_state_dict'])
+    classifier = classifier.eval()
 
     with torch.no_grad():
         scene_id = TEST_DATASET_WHOLE_SCENE.file_list
@@ -99,7 +104,7 @@ def main(args):
         log_string('---- EVALUATION WHOLE SCENE----')
 
         for batch_idx in range(num_batches):
-            print("visualize [%d/%d] %s ..." % (batch_idx+1, num_batches, scene_id[batch_idx]))
+            print("visualize [%d/%d] %s ..." % (batch_idx + 1, num_batches, scene_id[batch_idx]))
             total_seen_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_correct_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_iou_deno_class_tmp = [0 for _ in range(NUM_CLASSES)]
@@ -119,6 +124,7 @@ def main(args):
                 batch_label = np.zeros((BATCH_SIZE, NUM_POINT))
                 batch_point_index = np.zeros((BATCH_SIZE, NUM_POINT))
                 batch_smpw = np.zeros((BATCH_SIZE, NUM_POINT))
+
                 for sbatch in range(s_batch_num):
                     start_idx = sbatch * BATCH_SIZE
                     end_idx = min((sbatch + 1) * BATCH_SIZE, num_blocks)
@@ -130,7 +136,7 @@ def main(args):
                     batch_data[:, :, 3:6] /= 1.0
 
                     torch_data = torch.Tensor(batch_data)
-                    torch_data= torch_data.float().cuda()
+                    torch_data = torch_data.float().cuda()
                     torch_data = torch_data.transpose(2, 1)
                     seg_pred, _ = classifier(torch_data)
                     batch_pred_label = seg_pred.contiguous().cpu().data.max(2)[1].numpy()
@@ -166,12 +172,12 @@ def main(args):
                 color_gt = g_label2color[whole_scene_label[i]]
                 if args.visual:
                     fout.write('v %f %f %f %d %d %d\n' % (
-                    whole_scene_data[i, 0], whole_scene_data[i, 1], whole_scene_data[i, 2], color[0], color[1],
-                    color[2]))
+                        whole_scene_data[i, 0], whole_scene_data[i, 1], whole_scene_data[i, 2], color[0], color[1],
+                        color[2]))
                     fout_gt.write(
                         'v %f %f %f %d %d %d\n' % (
-                        whole_scene_data[i, 0], whole_scene_data[i, 1], whole_scene_data[i, 2], color_gt[0],
-                        color_gt[1], color_gt[2]))
+                            whole_scene_data[i, 0], whole_scene_data[i, 1], whole_scene_data[i, 2], color_gt[0],
+                            color_gt[1], color_gt[2]))
             if args.visual:
                 fout.close()
                 fout_gt.close()
@@ -187,9 +193,10 @@ def main(args):
         log_string('eval whole scene point avg class acc: %f' % (
             np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))))
         log_string('eval whole scene point accuracy: %f' % (
-                    np.sum(total_correct_class) / float(np.sum(total_seen_class) + 1e-6)))
+                np.sum(total_correct_class) / float(np.sum(total_seen_class) + 1e-6)))
 
         print("Done!")
+
 
 if __name__ == '__main__':
     args = parse_args()
