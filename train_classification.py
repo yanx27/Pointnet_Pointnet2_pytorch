@@ -110,8 +110,7 @@ def main(args):
 
     '''DATA LOADING'''
     log_string('Load dataset ...')
-    # data_path = 'data/modelnet40_normal_resampled/'
-    data_path = '/data/dataset/modelnet40_normal_resampled/'
+    data_path = 'data/modelnet40_normal_resampled/'
 
     train_dataset = ModelNetDataLoader(root=data_path, args=args, split='train', process_data=args.process_data)
     test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=args.process_data)

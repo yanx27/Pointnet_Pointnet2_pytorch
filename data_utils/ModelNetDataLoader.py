@@ -130,7 +130,6 @@ class ModelNetDataLoader(Dataset):
         if not self.use_normals:
             point_set = point_set[:, 0:3]
 
-
         return point_set, label[0]
 
     def __getitem__(self, index):
