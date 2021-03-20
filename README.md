@@ -65,7 +65,7 @@ python test_classification.py --log_dir pointnet2_cls_ssg --num_category 10
 | PointNet2_SSG (Pytorch with normal) |  92.4|
 | PointNet2_MSG (Pytorch with normal) |  **92.8**|
 
-## Part Segmentation
+## Part Segmentation (ShapeNet)
 ### Data Preparation
 Download alignment **ShapeNet** [here](https://shapenet.cs.stanford.edu/media/shapenetcore_partanno_segmentation_benchmark_v0_normal.zip)  and save in `data/shapenetcore_partanno_segmentation_benchmark_v0_normal/`.
 ### Run
@@ -85,7 +85,7 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 |PointNet2_MSG (Pytorch)|	**85.4**|	**82.5**	
 
 
-## Semantic Segmentation
+## Semantic Segmentation (S3DIS)
 ### Data Preparation
 Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stanford.edu/dataset.html)  and save in `data/s3dis/Stanford3dDataset_v1.2_Aligned_Version/`.
 ```
