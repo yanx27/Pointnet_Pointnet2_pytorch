@@ -138,5 +138,5 @@ def feature_transform_reguliarzer(trans):
     I = torch.eye(d)[None, :, :]
     if trans.is_cuda:
         I = I.cuda()
-    loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2, 1) - I), dim=(1, 2)))
+    loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2, 1)) - I, dim=(1, 2)))
     return loss
