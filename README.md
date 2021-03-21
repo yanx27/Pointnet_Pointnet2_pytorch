@@ -21,6 +21,11 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 
 (3) Organized all models into `./models` files for easy using.
 
+## Install
+The latest codes are tested on CUDA10.1, PyTorch 1.6 and Python 3.7:
+```shell
+conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
+```
 
 ## Classification (ModelNet10/40)
 ### Data Preparation
