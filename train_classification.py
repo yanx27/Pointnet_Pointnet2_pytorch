@@ -43,6 +43,12 @@ def parse_args():
     return parser.parse_args()
 
 
+def inplace_relu(m):
+    classname = m.__class__.__name__
+    if classname.find('ReLU') != -1:
+        m.inplace=True
+
+
 def test(model, loader, num_class=40):
     mean_correct = []
     class_acc = np.zeros((num_class, 3))
@@ -126,6 +132,7 @@ def main(args):
 
     classifier = model.get_model(num_class, normal_channel=args.use_normals)
     criterion = model.get_loss()
+    classifier.apply(inplace_relu)
 
     if not args.use_cpu:
         classifier = classifier.cuda()

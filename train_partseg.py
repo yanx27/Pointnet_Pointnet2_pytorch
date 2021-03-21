@@ -4,17 +4,18 @@ Date: Nov 2019
 """
 import argparse
 import os
-from data_utils.ShapeNetDataLoader import PartNormalDataset
 import torch
 import datetime
 import logging
-from pathlib import Path
 import sys
 import importlib
 import shutil
-from tqdm import tqdm
 import provider
 import numpy as np
+
+from pathlib import Path
+from tqdm import tqdm
+from data_utils.ShapeNetDataLoader import PartNormalDataset
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -29,6 +30,11 @@ for cat in seg_classes.keys():
     for label in seg_classes[cat]:
         seg_label_to_cat[label] = cat
 
+
+def inplace_relu(m):
+    classname = m.__class__.__name__
+    if classname.find('ReLU') != -1:
+        m.inplace=True
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
@@ -111,6 +117,7 @@ def main(args):
 
     classifier = MODEL.get_model(num_part, normal_channel=args.normal).cuda()
     criterion = MODEL.get_loss().cuda()
+    classifier.apply(inplace_relu)
 
     def weights_init(m):
         classname = m.__class__.__name__
