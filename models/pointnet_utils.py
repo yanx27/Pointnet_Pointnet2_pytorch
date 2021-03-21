@@ -104,11 +104,12 @@ class PointNetEncoder(nn.Module):
         B, D, N = x.size()
         trans = self.stn(x)
         x = x.transpose(2, 1)
-        if D >3 :
-            x, feature = x.split(3,dim=2)
+        if D > 3:
+            feature = x[:, :, 3:]
+            x = x[:, :, :3]
         x = torch.bmm(x, trans)
         if D > 3:
-            x = torch.cat([x,feature],dim=2)
+            x = torch.cat([x, feature], dim=2)
         x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x)))
 
