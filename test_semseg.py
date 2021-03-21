@@ -33,11 +33,11 @@ def parse_args():
     parser = argparse.ArgumentParser('Model')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size in testing [default: 32]')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--num_point', type=int, default=4096, help='Point Number [default: 4096]')
-    parser.add_argument('--log_dir', type=str, default='pointnet2_sem_seg', help='Experiment root')
-    parser.add_argument('--visual', action='store_true', default=False, help='Whether visualize result [default: False]')
-    parser.add_argument('--test_area', type=int, default=5, help='Which area to use for test, option: 1-6 [default: 5]')
-    parser.add_argument('--num_votes', type=int, default=5, help='Aggregate segmentation scores with voting [default: 5]')
+    parser.add_argument('--num_point', type=int, default=4096, help='point number [default: 4096]')
+    parser.add_argument('--log_dir', type=str, required=True, help='experiment root')
+    parser.add_argument('--visual', action='store_true', default=False, help='visualize result [default: False]')
+    parser.add_argument('--test_area', type=int, default=5, help='area for testing, option: 1-6 [default: 5]')
+    parser.add_argument('--num_votes', type=int, default=3, help='aggregate segmentation scores with voting [default: 5]')
     return parser.parse_args()
 
 
@@ -46,7 +46,7 @@ def add_vote(vote_label_pool, point_idx, pred_label, weight):
     N = pred_label.shape[1]
     for b in range(B):
         for n in range(N):
-            if weight[b, n]:
+            if weight[b, n] != 0 and not np.isinf(weight[b, n]):
                 vote_label_pool[int(point_idx[b, n]), int(pred_label[b, n])] += 1
     return vote_label_pool
 
@@ -104,7 +104,7 @@ def main(args):
         log_string('---- EVALUATION WHOLE SCENE----')
 
         for batch_idx in range(num_batches):
-            print("visualize [%d/%d] %s ..." % (batch_idx + 1, num_batches, scene_id[batch_idx]))
+            print("Inference [%d/%d] %s ..." % (batch_idx + 1, num_batches, scene_id[batch_idx]))
             total_seen_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_correct_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_iou_deno_class_tmp = [0 for _ in range(NUM_CLASSES)]
