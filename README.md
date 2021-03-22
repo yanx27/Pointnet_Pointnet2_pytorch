@@ -33,7 +33,7 @@ Download alignment **ModelNet** [here](https://shapenet.cs.stanford.edu/media/mo
 
 ### Run
 You can run different modes with following codes. 
-* If you want to use offline processing of data, you can use `--process_data` in the first run.
+* If you want to use offline processing of data, you can use `--process_data` in the first run. You can download pre-processd data [here](https://drive.google.com/drive/folders/1_fBYbDO3XSdRt3DSbEBe41r5l9YpIGWF?usp=sharing) and save it in `data/modelnet40_normal_resampled/`.
 * If you want to train on ModelNet10, you can use `--num_category 10`.
 ```shell
 # ModelNet40
