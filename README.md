@@ -3,6 +3,10 @@
 This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf) and [PointNet++](http://papers.nips.cc/paper/7095-pointnet-deep-hierarchical-feature-learning-on-point-sets-in-a-metric-space.pdf) in pytorch.
 
 ## Update
+**2021/03/26:** 
+
+Release pre-trained models for semantic segmentation, where PointNet++ can achieve 53.5% for mIoU.
+
 **2021/03/20:** Update codes for classification, including:
 
 (1) Add codes for training **ModelNet10** dataset. Using setting of ``--num_category 10``. 
@@ -107,6 +111,13 @@ python test_semseg.py --log_dir pointnet2_sem_seg --test_area 5 --visual
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
 
+### Performance
+|Model  | Overall Acc |Class avg IoU | Checkpoint 
+|--|--|--|--|
+| PointNet (Official) | N/A | 41.1| - |
+| PointNet (Pytorch) | 78.9 | 43.7| [40.7MB](log/sem_seg/pointnet_sem_seg) |
+| PointNet2 (Official) | N/A |N/A | - |
+| PointNet2_ssg (Pytorch) | 83.0 | **53.5**| [11.2MB](log/sem_seg/pointnet2_sem_seg) |
 
 ## Visualization
 ### Using show3d_balls.py
