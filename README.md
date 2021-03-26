@@ -5,7 +5,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 ## Update
 **2021/03/26:** 
 
-Release pre-trained models for semantic segmentation, where PointNet++ can achieve 53.5% for mIoU.
+Release pre-trained models for semantic segmentation, where PointNet++ can achieve **53.5\%** mIoU.
 
 **2021/03/20:** Update codes for classification, including:
 
@@ -19,7 +19,7 @@ Release pre-trained models for semantic segmentation, where PointNet++ can achie
 
 **2019/11/26:**
 
-(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification by only 1024 points can achieve 92.8\%! 
+(1) Fixed some errors in previous codes and added data augmentation tricks. Now classification by only 1024 points can achieve **92.8\%**! 
 
 (2) Added testing codes, including classification and segmentation, and semantic segmentation with visualization. 
 
@@ -115,7 +115,7 @@ Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and y
 |Model  | Overall Acc |Class avg IoU | Checkpoint 
 |--|--|--|--|
 | PointNet (Pytorch) | 78.9 | 43.7| [40.7MB](log/sem_seg/pointnet_sem_seg) |
-| PointNet2_ssg (Pytorch) | 83.0 | **53.5**| [11.2MB](log/sem_seg/pointnet2_sem_seg) |
+| PointNet2_ssg (Pytorch) | **83.0** | **53.5**| [11.2MB](log/sem_seg/pointnet2_sem_seg) |
 
 ## Visualization
 ### Using show3d_balls.py
