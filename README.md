@@ -28,7 +28,7 @@ This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_
 (3) Organized all models into `./models` files for easy using.
 
 ## Install
-The latest codes are tested on CUDA10.1, PyTorch 1.6 and Python 3.7:
+The latest codes are tested on Ubuntu 16.04, CUDA10.1, PyTorch 1.6 and Python 3.7:
 ```shell
 conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
 ```
@@ -138,11 +138,6 @@ python show3d_balls.py
 [fxia22/pointnet.pytorch](https://github.com/fxia22/pointnet.pytorch)<br>
 [charlesq34/PointNet](https://github.com/charlesq34/pointnet) <br>
 [charlesq34/PointNet++](https://github.com/charlesq34/pointnet2)
-
-## Environments
-Ubuntu 16.04 <br>
-Python 3.6.7 <br>
-Pytorch 1.1.0
 
 
 ## Citation
