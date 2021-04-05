@@ -115,7 +115,6 @@ class ModelNetDataLoader(Dataset):
     def _get_item(self, index):
         if self.process_data:
             point_set, label = self.list_of_points[index], self.list_of_labels[index]
-            point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
         else:
             fn = self.datapath[index]
             cls = self.classes[self.datapath[index][0]]
@@ -126,7 +125,8 @@ class ModelNetDataLoader(Dataset):
                 point_set = farthest_point_sample(point_set, self.npoints)
             else:
                 point_set = point_set[0:self.npoints, :]
-
+                
+        point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
         if not self.use_normals:
             point_set = point_set[:, 0:3]
 
