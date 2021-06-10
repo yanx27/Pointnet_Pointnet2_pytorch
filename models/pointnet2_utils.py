@@ -105,7 +105,7 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     group_idx[mask] = group_first[mask]
 
     if group_idx.max()> N-1:
-        pdb.set_trace()
+        raise Exception('invalid indices')
 
     return group_idx
 
