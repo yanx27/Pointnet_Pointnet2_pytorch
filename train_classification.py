@@ -228,5 +228,6 @@ def main(args):
 
 
 if __name__ == '__main__':
+    # torch.cuda.empty_cache()
     args = parse_args()
     main(args)
