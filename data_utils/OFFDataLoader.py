@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
-from path import Path
+from pathlib import Path
 
 PATH= Path("../mesh_data/ModelNet10")
 class RandRotation_z(object):
