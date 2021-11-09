@@ -39,6 +39,10 @@ def test(model, loader, num_class=40, vote_num=1):
 
     for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
         if not args.use_cpu:
+            print(points)
+            print(type(points))
+            print(target)
+            print(type(target))
             points, target = points.cuda(), target.cuda()
 
         points = points.transpose(2, 1)

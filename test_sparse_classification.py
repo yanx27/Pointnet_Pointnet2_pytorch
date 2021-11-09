@@ -33,15 +33,19 @@ def parse_args():
     parser.add_argument('--num_votes', type=int, default=3, help='Aggregate classification scores with voting')
     return parser.parse_args()
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def test(model, loader, num_class=10, vote_num=1):
     mean_correct = []
     classifier = model.eval()
     class_acc = np.zeros((num_class, 3))
 
-    for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
+    for j, data in tqdm(enumerate(loader), total=len(loader)):
         if not args.use_cpu:
-            points, target = points.cuda(), target.cuda()
+            # points, target = points.cuda(), target.cuda()
+            points, target = data['pointcloud'].to(device).float(), data['category'].to(device)
+            print(points)
+            print(target)
 
         points = points.transpose(2, 1)
         vote_pool = torch.zeros(target.size()[0], num_class).cuda()
@@ -94,7 +98,7 @@ def main(args):
     data_path = Path("mesh_data/ModelNet10")
 
     test_transforms = transforms.Compose([
-            PointSampler(50),
+            PointSampler(1024),
             Normalize(),
             RandRotation_z(),
             RandomNoise(),

@@ -17,9 +17,7 @@ import argparse
 
 from pathlib import Path
 from tqdm import tqdm
-from data_utils.OFFDataLoader import *
-# from path import Path
-# from data_utils.ModelNetDataLoader import ModelNetDataLoader
+from data_utils.ModelNetDataLoader import ModelNetDataLoader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -32,7 +30,7 @@ def parse_args():
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--batch_size', type=int, default=24, help='batch size in training')
     parser.add_argument('--model', default='pointnet_cls', help='model name [default: pointnet_cls]')
-    parser.add_argument('--num_category', default=10, type=int, choices=[10, 40],  help='training on ModelNet10/40')
+    parser.add_argument('--num_category', default=40, type=int, choices=[10, 40],  help='training on ModelNet10/40')
     parser.add_argument('--epoch', default=200, type=int, help='number of epoch in training')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number')
@@ -45,23 +43,21 @@ def parse_args():
     return parser.parse_args()
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 def inplace_relu(m):
     classname = m.__class__.__name__
     if classname.find('ReLU') != -1:
         m.inplace=True
 
 
-def test(model, loader, num_class=10):
+def test(model, loader, num_class=40):
     mean_correct = []
     class_acc = np.zeros((num_class, 3))
     classifier = model.eval()
 
-    for j, data in tqdm(enumerate(loader), total=len(loader)):
+    for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
 
         if not args.use_cpu:
-            points, target = data['pointcloud'].to(device).float(), data['category'].to(device)
+            points, target = points.cuda(), target.cuda()
 
         points = points.transpose(2, 1)
         pred, _ = classifier(points)
@@ -120,31 +116,10 @@ def main(args):
 
     '''DATA LOADING'''
     log_string('Load dataset ...')
-    # data_path = 'data/modelnet40_normal_resampled/'
-    data_path = Path("mesh_data/ModelNet10")
+    data_path = 'data/modelnet40_normal_resampled/'
 
-    train_transforms = transforms.Compose([
-            PointSampler(1024),
-            Normalize(),
-            RandRotation_z(),
-            RandomNoise(),
-            ToTensor()
-            ])
-
-    test_transforms = transforms.Compose([
-            PointSampler(1024),
-            Normalize(),
-            RandRotation_z(),
-            RandomNoise(),
-            ToTensor()
-            ])
-
-    # train_dataset = ModelNetDataLoader(root=data_path, args=args, split='train', process_data=args.process_data)
-    # test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=args.process_data)
-
-    train_dataset = PointCloudData(data_path, transform=train_transforms)
-    test_dataset = PointCloudData(data_path, valid=True, folder='test', transform=test_transforms)
-
+    train_dataset = ModelNetDataLoader(root=data_path, args=args, split='train', process_data=args.process_data)
+    test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=args.process_data)
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
     testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=10)
 
@@ -154,7 +129,6 @@ def main(args):
     shutil.copy('./models/%s.py' % args.model, str(exp_dir))
     shutil.copy('models/pointnet2_utils.py', str(exp_dir))
     shutil.copy('./train_classification.py', str(exp_dir))
-    # shutil.copy('./train_dense_classification.py', str(exp_dir))
 
     classifier = model.get_model(num_class, normal_channel=args.use_normals)
     criterion = model.get_loss()
@@ -198,11 +172,10 @@ def main(args):
         classifier = classifier.train()
 
         scheduler.step()
-        for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
+        for batch_id, (points, target) in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
-            points, target = data['pointcloud'].to(device).float(), data['category'].to(device)
 
-            points = points.data.cpu().numpy()
+            points = points.data.numpy()
             points = provider.random_point_dropout(points)
             points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3])
             points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
