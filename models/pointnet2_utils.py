@@ -65,6 +65,7 @@ def farthest_point_sample(xyz, npoint):
     Input:
         xyz: pointcloud data, [B, N, 3]
         npoint: number of samples
+                npoint is the "M" in the paper, M centroid points   --cong
     Return:
         centroids: sampled pointcloud index, [B, npoint]
     """
@@ -81,6 +82,8 @@ def farthest_point_sample(xyz, npoint):
         mask = dist < distance
         distance[mask] = dist[mask]
         farthest = torch.max(distance, -1)[1]
+    print("Debuging.........farthest_point_sample")
+    print(centroids.size())
     return centroids
 
 
@@ -89,21 +92,35 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     Input:
         radius: local region radius
         nsample: max sample number in local region
+                 nsample is the "K" in the paper, the number of points in the ball   --cong
         xyz: all points, [B, N, 3]
         new_xyz: query points, [B, S, 3]
+                 S is the "M" in the paper, the centroid points from farthest_point_sample()
+                 --cong
     Return:
         group_idx: grouped points index, [B, S, nsample]
+                   return is the [B, M, K] in the paper, centroid points and K sampled
     """
     device = xyz.device
     B, N, C = xyz.shape
     _, S, _ = new_xyz.shape
+    print("This is query_ball_point function....")
+    if nsample > N:
+        nsample = N  # This is an important change
+    print("Batch: ", B,"#Points: ", N,"FeatureDim: ", C,"#Center: ", S, "#K", nsample)
     group_idx = torch.arange(N, dtype=torch.long).to(device).view(1, 1, N).repeat([B, S, 1])
+    # print("group_idx", group_idx.size())
     sqrdists = square_distance(new_xyz, xyz)
     group_idx[sqrdists > radius ** 2] = N
     group_idx = group_idx.sort(dim=-1)[0][:, :, :nsample]
+    # print(".....group_idx", group_idx.size())
     group_first = group_idx[:, :, 0].view(B, S, 1).repeat([1, 1, nsample])
+    # print("group_first", group_first.size())
     mask = group_idx == N
+    # print("mask", mask.size())
     group_idx[mask] = group_first[mask]
+    print("Debuging............query_ball_point")
+    print(group_idx.size())
     return group_idx
 
 
@@ -114,7 +131,7 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
         radius:
         nsample:
         xyz: input points position data, [B, N, 3]
-        points: input points data, [B, N, D]
+        points: input points data, [B, N, D]    Feature of points!
     Return:
         new_xyz: sampled points position data, [B, npoint, nsample, 3]
         new_points: sampled points data, [B, npoint, nsample, 3+D]
@@ -122,10 +139,10 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
     B, N, C = xyz.shape
     S = npoint
     fps_idx = farthest_point_sample(xyz, npoint) # [B, npoint, C]
-    new_xyz = index_points(xyz, fps_idx)
+    new_xyz = index_points(xyz, fps_idx) # centroid points
     idx = query_ball_point(radius, nsample, xyz, new_xyz)
     grouped_xyz = index_points(xyz, idx) # [B, npoint, nsample, C]
-    grouped_xyz_norm = grouped_xyz - new_xyz.view(B, S, 1, C)
+    grouped_xyz_norm = grouped_xyz - new_xyz.view(B, S, 1, C) # vector form --Cong
 
     if points is not None:
         grouped_points = index_points(points, idx)
