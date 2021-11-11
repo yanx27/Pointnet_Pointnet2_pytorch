@@ -82,8 +82,8 @@ def farthest_point_sample(xyz, npoint):
         mask = dist < distance
         distance[mask] = dist[mask]
         farthest = torch.max(distance, -1)[1]
-    print("Debuging.........farthest_point_sample")
-    print(centroids.size())
+    # print("Debuging.........farthest_point_sample")
+    # print(centroids.size())
     return centroids
 
 
@@ -119,8 +119,8 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     mask = group_idx == N
     # print("mask", mask.size())
     group_idx[mask] = group_first[mask]
-    print("Debuging............query_ball_point")
-    print(group_idx.size())
+    # print("Debuging............query_ball_point")
+    # print(group_idx.size())
     return group_idx
 
 
