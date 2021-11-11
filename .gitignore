@@ -116,3 +116,6 @@ dmypy.json
 # data
 data/
 mesh_data/
+
+# Linux nohup
+nohup.out
