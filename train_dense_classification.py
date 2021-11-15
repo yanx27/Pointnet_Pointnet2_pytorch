@@ -124,7 +124,7 @@ def main(args):
     data_path = Path("mesh_data/ModelNet10")
 
     train_transforms = transforms.Compose([
-            PointSampler(1024),
+        PointSampler(args.num_point),
             Normalize(),
             RandRotation_z(),
             RandomNoise(),
@@ -132,7 +132,7 @@ def main(args):
             ])
 
     test_transforms = transforms.Compose([
-            PointSampler(1024),
+        PointSampler(args.num_point),
             Normalize(),
             RandRotation_z(),
             RandomNoise(),
