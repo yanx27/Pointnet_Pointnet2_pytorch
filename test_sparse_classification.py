@@ -44,9 +44,8 @@ def test(model, loader, num_class=10, vote_num=1):
         if not args.use_cpu:
             # points, target = points.cuda(), target.cuda()
             points, target = data['pointcloud'].to(device).float(), data['category'].to(device)
-            print("points............")
-            print(points.size())
-            # print(target)
+            # print("points............")
+            # print(points.size())
 
         points = points.transpose(2, 1)
         vote_pool = torch.zeros(target.size()[0], num_class).cuda()
