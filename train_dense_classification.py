@@ -53,7 +53,7 @@ def inplace_relu(m):
         m.inplace=True
 
 
-def test(model, loader, num_class=args.num_category):
+def test(model, loader, num_class=10):
     mean_correct = []
     class_acc = np.zeros((num_class, 3))
     classifier = model.eval()
