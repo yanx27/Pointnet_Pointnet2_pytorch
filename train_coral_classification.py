@@ -53,7 +53,7 @@ def inplace_relu(m):
         m.inplace=True
 
 
-def test(model, loader, num_class=args.num_category):
+def test(model, loader, num_class=10):
     mean_correct = []
     class_acc = np.zeros((num_class, 3))
     classifier = model.eval()
@@ -172,6 +172,11 @@ def main(args):
     except:
         log_string('No existing model, starting training from scratch...')
         start_epoch = 0
+
+    # Test parameters
+    print("Test Parameters .........................")
+    for parameters in classifier.parameters():
+        print(parameters)
 
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(
