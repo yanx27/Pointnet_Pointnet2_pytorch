@@ -309,7 +309,7 @@ def main(args):
             output_coral = classifier(points_coral)
             feature_coral = activation['feat']
             # print(output.size())
-            print("----------------------")
+            # print("----------------------")
             # print(feature_dense.size())
             # print(feature_coral.size())
 
