@@ -175,8 +175,10 @@ def main(args):
 
     # Test parameters
     print("Test Parameters .........................")
-    for parameters in classifier.parameters():
-        print(parameters)
+    # for name, param in classifier.named_parameters():
+    #     print(name)
+    #     print(type(name))
+    #     print(str(param.requires_grad))
 
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(
@@ -197,9 +199,20 @@ def main(args):
 
     '''TRANING'''
     logger.info('Start training...')
+    print("start_epoch: ", start_epoch)
+    print("args.epoch; ", args.epoch)
     for epoch in range(start_epoch, args.epoch):
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
         mean_correct = []
+        # Test Freeze Conv
+        for name, param in classifier.named_parameters():
+            if "conv" in name:
+                param.requires_grad = False
+
+            print(name)
+            print(param.requires_grad)
+
+
         classifier = classifier.train()
 
         scheduler.step()
