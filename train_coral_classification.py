@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=8, help='batch size in training')
     parser.add_argument('--model', default='pointnet_cls', help='model name [default: pointnet_cls]')
     parser.add_argument('--num_category', default=10, type=int, choices=[10, 40],  help='training on ModelNet10/40')
-    parser.add_argument('--epoch', default=200, type=int, help='number of epoch in training')
+    parser.add_argument('--epoch', default=50, type=int, help='number of epoch in training')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number')
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer for training')
@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--use_normals', action='store_true', default=False, help='use normals')
     parser.add_argument('--process_data', action='store_true', default=False, help='save data offline')
     parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
-    parser.add_argument('--num_sparse_point', type=int, default=128, help='Point Number for coral loss')
+    parser.add_argument('--num_sparse_point', type=int, default=10, help='Point Number for coral loss')
     return parser.parse_args()
 
 
@@ -253,17 +253,18 @@ def main(args):
 
     '''TRANING'''
     logger.info('Start training...')
-    print("start_epoch: ", start_epoch)
-    print("args.epoch; ", args.epoch)
-    for epoch in range(start_epoch, args.epoch):
-        log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
+    end_epoch = start_epoch + args.epoch
+    print("start epoch: ", start_epoch)
+    print("end epoch: ", end_epoch)
+    for epoch in range(start_epoch, end_epoch):
+        log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, end_epoch))
         mean_correct = []
         # Test Freeze Conv
         for name, param in classifier.named_parameters():
             if "feat" in name:
                 param.requires_grad = False
-            print(name)
-            print(param.requires_grad)
+            # print(name)
+            # print(param.requires_grad)
 
 
         classifier = classifier.train()
@@ -313,7 +314,7 @@ def main(args):
             # print(feature_coral.size())
 
             loss = criterion_coral(pred, target.long(), trans_feat, feature_dense, feature_coral)
-            print(loss)
+            # print(loss)
 
             pred_choice = pred.data.max(1)[1]
 
@@ -340,10 +341,9 @@ def main(args):
             log_string('Best Instance Accuracy: %f, Class Accuracy: %f' % (best_instance_acc, best_class_acc))
 
             if (instance_acc >= best_instance_acc):
-                # logger.info('Save model...')
-                print("This is a better model, but the model will not be saved")
-                logger.info('Model will not be saved in this training')
-                """
+                logger.info('Save model...')
+                # print("This is a better model, but the model will not be saved")
+                # logger.info('Model will not be saved in this training')
                 savepath = str(checkpoints_dir) + '/best_model.pth'
                 log_string('Saving at %s' % savepath)
                 state = {
@@ -354,7 +354,6 @@ def main(args):
                     'optimizer_state_dict': optimizer.state_dict(),
                 }
                 torch.save(state, savepath)
-                """
             global_epoch += 1
 
     logger.info('End of training...')
