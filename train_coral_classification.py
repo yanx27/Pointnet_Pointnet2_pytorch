@@ -30,7 +30,7 @@ def parse_args():
     parser = argparse.ArgumentParser('training')
     parser.add_argument('--use_cpu', action='store_true', default=False, help='use cpu mode')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--batch_size', type=int, default=24, help='batch size in training')
+    parser.add_argument('--batch_size', type=int, default=8, help='batch size in training')
     parser.add_argument('--model', default='pointnet_cls', help='model name [default: pointnet_cls]')
     parser.add_argument('--num_category', default=10, type=int, choices=[10, 40],  help='training on ModelNet10/40')
     parser.add_argument('--epoch', default=200, type=int, help='number of epoch in training')
@@ -42,10 +42,45 @@ def parse_args():
     parser.add_argument('--use_normals', action='store_true', default=False, help='use normals')
     parser.add_argument('--process_data', action='store_true', default=False, help='save data offline')
     parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
+    parser.add_argument('--num_sparse_point', type=int, default=128, help='Point Number for coral loss')
     return parser.parse_args()
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+"""
+def coral(source, target):
+
+    d = source.size(1)  # dim vector
+
+    source_c = compute_covariance(source)
+    target_c = compute_covariance(target)
+
+    loss = torch.sum(torch.mul((source_c - target_c), (source_c - target_c)))
+
+    loss = loss / (4 * d * d)
+    return loss
+
+def compute_covariance(input_data):
+    '''
+    Compute Covariance matrix of the input data
+    '''
+    n = input_data.size(0)  # batch_size
+
+    # Check if using gpu or cpu
+    if input_data.is_cuda:
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+
+    id_row = torch.ones(n).resize(1, n).to(device=device)
+    sum_column = torch.mm(id_row, input_data)
+    mean_column = torch.div(sum_column, n)
+    term_mul_2 = torch.mm(mean_column.t(), mean_column)
+    d_t_d = torch.mm(input_data.t(), input_data)
+    c = torch.add(d_t_d, (-1 * term_mul_2)) * 1 / (n - 1)
+    return c
+"""
 
 def inplace_relu(m):
     classname = m.__class__.__name__
@@ -131,6 +166,14 @@ def main(args):
             ToTensor()
             ])
 
+    coral_transforms = transforms.Compose([
+        PointSampler(args.num_sparse_point),
+            Normalize(),
+            RandRotation_z(),
+            RandomNoise(),
+            ToTensor()
+            ])
+
     test_transforms = transforms.Compose([
         PointSampler(args.num_point),
             Normalize(),
@@ -143,10 +186,19 @@ def main(args):
     # test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=args.process_data)
 
     train_dataset = PointCloudData(data_path, transform=train_transforms)
+    coral_dataset = PointCloudData(data_path, transform=coral_transforms)
     test_dataset = PointCloudData(data_path, valid=True, folder='test', transform=test_transforms)
 
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
+    coralDataLoader = torch.utils.data.DataLoader(coral_dataset, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
     testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=10)
+
+    '''Output conv layers'''
+    activation = {}
+    def get_activation(name):
+        def hook(model, input, output):
+            activation [name] = output[0].detach()
+        return hook
 
     '''MODEL LOADING'''
     num_class = args.num_category
@@ -158,11 +210,13 @@ def main(args):
 
     classifier = model.get_model(num_class, normal_channel=args.use_normals)
     criterion = model.get_loss()
+    criterion_coral = model.get_coral_loss()
     classifier.apply(inplace_relu)
 
     if not args.use_cpu:
         classifier = classifier.cuda()
         criterion = criterion.cuda()
+        criterion_coral = criterion_coral.cuda()
 
     try:
         checkpoint = torch.load(str(exp_dir) + '/checkpoints/best_model.pth')
@@ -206,9 +260,8 @@ def main(args):
         mean_correct = []
         # Test Freeze Conv
         for name, param in classifier.named_parameters():
-            if "conv" in name:
+            if "feat" in name:
                 param.requires_grad = False
-
             print(name)
             print(param.requires_grad)
 
@@ -216,9 +269,15 @@ def main(args):
         classifier = classifier.train()
 
         scheduler.step()
-        for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
+        # for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
+        for batch_id, (data, data_coral) in tqdm(
+                enumerate(zip(trainDataLoader,coralDataLoader), 0),
+                total=len(trainDataLoader),
+                smoothing=0.9):
+
             optimizer.zero_grad()
             points, target = data['pointcloud'].to(device).float(), data['category'].to(device)
+            points_coral = data_coral['pointcloud'].to(device).float()
 
             points = points.data.cpu().numpy()
             points = provider.random_point_dropout(points)
@@ -227,15 +286,40 @@ def main(args):
             points = torch.Tensor(points)
             points = points.transpose(2, 1)
 
+            points_coral = points_coral.data.cpu().numpy()
+            points_coral = provider.random_point_dropout(points_coral)
+            points_coral[:, :, 0:3] = provider.random_scale_point_cloud(points_coral[:, :, 0:3])
+            points_coral[:, :, 0:3] = provider.shift_point_cloud(points_coral[:, :, 0:3])
+            points_coral = torch.Tensor(points_coral)
+            points_coral = points_coral.transpose(2, 1)
+
             if not args.use_cpu:
                 points, target = points.cuda(), target.cuda()
+                points_coral = points_coral.cuda()
 
             pred, trans_feat = classifier(points)
-            loss = criterion(pred, target.long(), trans_feat)
+            # loss = criterion(pred, target.long(), trans_feat)
+
+            classifier.feat.register_forward_hook(get_activation('feat'))
+            output_dense = classifier(points)
+            feature_dense = activation['feat']
+
+            classifier.feat.register_forward_hook(get_activation('feat'))
+            output_coral = classifier(points_coral)
+            feature_coral = activation['feat']
+            # print(output.size())
+            print("----------------------")
+            # print(feature_dense.size())
+            # print(feature_coral.size())
+
+            loss = criterion_coral(pred, target.long(), trans_feat, feature_dense, feature_coral)
+            print(loss)
+
             pred_choice = pred.data.max(1)[1]
 
             correct = pred_choice.eq(target.long().data).cpu().sum()
             mean_correct.append(correct.item() / float(points.size()[0]))
+
             loss.backward()
             optimizer.step()
             global_step += 1
@@ -256,7 +340,10 @@ def main(args):
             log_string('Best Instance Accuracy: %f, Class Accuracy: %f' % (best_instance_acc, best_class_acc))
 
             if (instance_acc >= best_instance_acc):
-                logger.info('Save model...')
+                # logger.info('Save model...')
+                print("This is a better model, but the model will not be saved")
+                logger.info('Model will not be saved in this training')
+                """
                 savepath = str(checkpoints_dir) + '/best_model.pth'
                 log_string('Saving at %s' % savepath)
                 state = {
@@ -267,6 +354,7 @@ def main(args):
                     'optimizer_state_dict': optimizer.state_dict(),
                 }
                 torch.save(state, savepath)
+                """
             global_epoch += 1
 
     logger.info('End of training...')
