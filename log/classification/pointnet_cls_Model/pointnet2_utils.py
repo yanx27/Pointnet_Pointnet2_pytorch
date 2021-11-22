@@ -104,7 +104,7 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     device = xyz.device
     B, N, C = xyz.shape
     _, S, _ = new_xyz.shape
-    print("This is query_ball_point function....")
+    # print("This is query_ball_point function....")
     if nsample > N:
         nsample = N  # This is an important change
     print("Batch: ", B,"#Points: ", N,"FeatureDim: ", C,"#Center: ", S, "#K", nsample)
