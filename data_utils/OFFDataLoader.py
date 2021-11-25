@@ -33,6 +33,9 @@ class RandomNoise(object):
 
 
 class PointSampler(object):
+    '''
+    Uniformly sample the faces. Then randomly sample the points on the faces.
+    '''
     def __init__(self, output_size):
         assert isinstance(output_size, int)
         self.output_size = output_size
@@ -65,6 +68,8 @@ class PointSampler(object):
                                       weights=areas,
                                       cum_weights=None,
                                       k=self.output_size))
+        print(sampled_faces)
+        print(len(sampled_faces))
 
         sampled_points = np.zeros((self.output_size, 3))
 
@@ -73,14 +78,16 @@ class PointSampler(object):
                                                    verts[sampled_faces[i][1]],
                                                    verts[sampled_faces[i][2]]))
 
+        # print(sampled_points)
         return sampled_points
 
 
 class Normalize(object):
     def __call__(self, pointcloud):
         assert len(pointcloud.shape)==2
-        norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0)
-        norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1))
+        norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0) # translate to origin
+        norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1)) # normalize
+        print(norm_pointcloud)
         return  norm_pointcloud
 
 
@@ -162,5 +169,5 @@ if __name__ == "__main__":
 
     test_ds = PointCloudData(PATH, valid=True, folder='test', transform=test_transforms)
     test_pointcloud = test_ds.__getitem__(2)
-    print(test_pointcloud.__sizeof__())
-    print(test_pointcloud)
+    # print(test_pointcloud.__sizeof__())
+    # print(test_pointcloud)
