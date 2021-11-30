@@ -68,18 +68,27 @@ class PointSampler(object):
                                       weights=areas,
                                       cum_weights=None,
                                       k=self.output_size))
-        print(sampled_faces)
-        print(len(sampled_faces))
 
         sampled_points = np.zeros((self.output_size, 3))
+        sampled_points_with_norm = np.zeros((self.output_size, 6)) # points with normals
+        points_normal = np.zeros((self.output_size, 3)) # normals
 
         for i in range(len(sampled_faces)):
             sampled_points[i] = (self.sample_point(verts[sampled_faces[i][0]],
                                                    verts[sampled_faces[i][1]],
                                                    verts[sampled_faces[i][2]]))
 
-        # print(sampled_points)
-        return sampled_points
+            # Cross production AB * AC
+            points_normal[i] = np.cross(
+                (verts[sampled_faces[i][1]]-verts[sampled_faces[i][0]]),
+                (verts[sampled_faces[i][2]]-verts[sampled_faces[i][0]])
+            )
+
+        sampled_points_with_norm = np.concatenate((sampled_points,points_normal), axis=1)
+        # print(sampled_points_with_norm.shape)
+
+        # return sampled_points
+        return sampled_points_with_norm
 
 
 class Normalize(object):
@@ -87,7 +96,6 @@ class Normalize(object):
         assert len(pointcloud.shape)==2
         norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0) # translate to origin
         norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1)) # normalize
-        print(norm_pointcloud)
         return  norm_pointcloud
 
 
@@ -168,6 +176,6 @@ if __name__ == "__main__":
             ])
 
     test_ds = PointCloudData(PATH, valid=True, folder='test', transform=test_transforms)
-    test_pointcloud = test_ds.__getitem__(2)
+    test_pointcloud = test_ds.__getitem__(10)
     # print(test_pointcloud.__sizeof__())
     # print(test_pointcloud)
