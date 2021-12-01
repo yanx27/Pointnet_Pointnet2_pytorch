@@ -19,7 +19,9 @@ class RandRotation_z(object):
                                [ math.sin(theta),  math.cos(theta),    0],
                                [0,                             0,      1]])
 
-        rot_pointcloud = rot_matrix.dot(pointcloud.T).T
+        # concatenate the rotation matrix for using point clouds with normals. Shape (3,6)
+        rot_matrix_with_normal = np.concatenate((rot_matrix, rot_matrix), axis=1)
+        rot_pointcloud = rot_matrix_with_normal.dot(pointcloud.T).T
         return  rot_pointcloud
 
 
