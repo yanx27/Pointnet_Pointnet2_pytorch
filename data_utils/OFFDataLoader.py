@@ -2,6 +2,7 @@ import numpy as np
 import random
 import math
 import os
+from scipy.spatial.transform import Rotation as R
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -11,17 +12,30 @@ from pathlib import Path
 
 PATH= Path("../mesh_data/ModelNet10")
 class RandRotation_z(object):
+    def __init__(self, with_normal=False, SO3=False):
+        self.with_normal = with_normal
+        self.SO3 = SO3
+
     def __call__(self, pointcloud):
         assert len(pointcloud.shape)==2
+        roll, pitch, yaw = np.random.rand(3)*np.pi*2
 
-        theta = random.random() * 2. * math.pi
-        rot_matrix = np.array([[ math.cos(theta), -math.sin(theta),    0],
-                               [ math.sin(theta),  math.cos(theta),    0],
-                               [0,                             0,      1]])
+        if self.SO3 is False:
+            pitch, roll = 0.0, 0.0
+
+        rot_matrix = R.from_euler('XZY', (roll, yaw, pitch)).as_matrix()
+        print(rot_matrix)
+        # theta = random.random() * 2. * math.pi
+        # rot_matrix = np.array([[ math.cos(theta), -math.sin(theta),    0],
+        #                        [ math.sin(theta),  math.cos(theta),    0],
+        #                        [0,                             0,      1]])
 
         # concatenate the rotation matrix for using point clouds with normals. Shape (3,6)
         rot_matrix_with_normal = np.concatenate((rot_matrix, rot_matrix), axis=1)
-        rot_pointcloud = rot_matrix_with_normal.dot(pointcloud.T).T
+        if self.with_normal is True:
+            rot_pointcloud = rot_matrix_with_normal.dot(pointcloud.T).T
+        else:
+            rot_pointcloud = rot_matrix.dot(pointcloud.T).T
         return  rot_pointcloud
 
 
@@ -38,9 +52,10 @@ class PointSampler(object):
     '''
     Uniformly sample the faces. Then randomly sample the points on the faces.
     '''
-    def __init__(self, output_size):
+    def __init__(self, output_size, with_normal=False):
         assert isinstance(output_size, int)
         self.output_size = output_size
+        self.with_normal = with_normal
 
     def triangle_area(self, pt1, pt2, pt3):
         side_a = np.linalg.norm(pt1 - pt2)
@@ -89,8 +104,12 @@ class PointSampler(object):
         sampled_points_with_norm = np.concatenate((sampled_points,points_normal), axis=1)
         # print(sampled_points_with_norm.shape)
 
-        # return sampled_points
-        return sampled_points_with_norm
+        if self.with_normal is True:
+            # print(sampled_points_with_norm)
+            return sampled_points_with_norm
+        else:
+            # print(sample_point)
+            return sampled_points
 
 
 class Normalize(object):
@@ -163,16 +182,16 @@ class PointCloudData(Dataset):
 if __name__ == "__main__":
 
     train_transforms = transforms.Compose([
-            PointSampler(1024),
+            PointSampler(1024, with_normal=True),
             Normalize(),
             RandRotation_z(),
             RandomNoise(),
             ToTensor()
             ])
     test_transforms = transforms.Compose([
-            PointSampler(50),
+            PointSampler(50, with_normal=True),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=True, SO3=True),
             RandomNoise(),
             ToTensor()
             ])
