@@ -126,25 +126,25 @@ def main(args):
     data_path = Path("mesh_data/ModelNet10")
 
     train_transforms = transforms.Compose([
-        PointSampler(args.num_point),
+        PointSampler(args.num_point, with_normal=args.use_normals),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
             RandomNoise(),
             ToTensor()
             ])
 
     coral_transforms = transforms.Compose([
-        PointSampler(args.num_sparse_point),
+        PointSampler(args.num_sparse_point, with_normal=args.use_normals),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
             RandomNoise(),
             ToTensor()
             ])
 
     test_transforms = transforms.Compose([
-        PointSampler(args.num_point),
+        PointSampler(args.num_point, with_normal=args.use_normals),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
             RandomNoise(),
             ToTensor()
             ])

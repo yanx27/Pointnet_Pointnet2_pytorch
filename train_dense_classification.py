@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument('--use_normals', action='store_true', default=False, help='use normals')
     parser.add_argument('--process_data', action='store_true', default=False, help='save data offline')
     parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
+    parser.add_argument('--SO3_Rotation', action='store_true', default=False, help='arbitrary rotation in SO3')
     return parser.parse_args()
 
 
@@ -124,17 +125,17 @@ def main(args):
     data_path = Path("mesh_data/ModelNet10")
 
     train_transforms = transforms.Compose([
-        PointSampler(args.num_point),
+        PointSampler(args.num_point, with_normal=args.use_normals),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
             RandomNoise(),
             ToTensor()
             ])
 
     test_transforms = transforms.Compose([
-        PointSampler(args.num_point),
+        PointSampler(args.num_point, with_normal=args.use_normals),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
             RandomNoise(),
             ToTensor()
             ])

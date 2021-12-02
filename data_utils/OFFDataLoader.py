@@ -19,19 +19,17 @@ class RandRotation_z(object):
     def __call__(self, pointcloud):
         assert len(pointcloud.shape)==2
         roll, pitch, yaw = np.random.rand(3)*np.pi*2
-
         if self.SO3 is False:
             pitch, roll = 0.0, 0.0
 
         rot_matrix = R.from_euler('XZY', (roll, yaw, pitch)).as_matrix()
-        print(rot_matrix)
-        # theta = random.random() * 2. * math.pi
-        # rot_matrix = np.array([[ math.cos(theta), -math.sin(theta),    0],
-        #                        [ math.sin(theta),  math.cos(theta),    0],
-        #                        [0,                             0,      1]])
 
-        # concatenate the rotation matrix for using point clouds with normals. Shape (3,6)
-        rot_matrix_with_normal = np.concatenate((rot_matrix, rot_matrix), axis=1)
+        # Transform the rotation matrix for points with normals. Shape (6,6)
+        zero_matrix = np.zeros((3,3))
+        tmp_matrix = np.concatenate((rot_matrix,zero_matrix),axis=1) # [R,0]
+        tmp_matrix_2 = np.concatenate((zero_matrix, rot_matrix), axis=1) # [0,R]
+        # [[R,0],[0,R]]
+        rot_matrix_with_normal = np.concatenate((tmp_matrix, tmp_matrix_2), axis=0)
         if self.with_normal is True:
             rot_pointcloud = rot_matrix_with_normal.dot(pointcloud.T).T
         else:

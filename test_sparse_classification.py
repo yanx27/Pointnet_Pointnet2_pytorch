@@ -98,9 +98,9 @@ def main(args):
     data_path = Path("mesh_data/ModelNet10")
 
     test_transforms = transforms.Compose([
-            PointSampler(args.num_point),
+            PointSampler(args.num_point, with_normal=args.use_normals),
             Normalize(),
-            RandRotation_z(),
+            RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
             RandomNoise(),
             ToTensor()
             ])
