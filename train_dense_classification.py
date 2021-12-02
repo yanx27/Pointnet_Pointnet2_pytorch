@@ -193,8 +193,11 @@ def main(args):
 
     '''TRANING'''
     logger.info('Start training...')
-    for epoch in range(start_epoch, args.epoch):
-        log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
+    end_epoch = start_epoch + args.epoch
+    print("start epoch: ", start_epoch)
+    print("end epoch: ", end_epoch)
+    for epoch in range(start_epoch, end_epoch):
+        log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, end_epoch))
         mean_correct = []
         classifier = classifier.train()
 
