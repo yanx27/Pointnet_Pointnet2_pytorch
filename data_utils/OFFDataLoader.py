@@ -98,6 +98,7 @@ class PointSampler(object):
                 (verts[sampled_faces[i][1]]-verts[sampled_faces[i][0]]),
                 (verts[sampled_faces[i][2]]-verts[sampled_faces[i][0]])
             )
+            points_normal[i] = points_normal[i]/np.linalg.norm(points_normal[i])
 
         sampled_points_with_norm = np.concatenate((sampled_points,points_normal), axis=1)
         # print(sampled_points_with_norm.shape)
