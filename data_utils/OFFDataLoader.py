@@ -114,9 +114,19 @@ class PointSampler(object):
 class Normalize(object):
     def __call__(self, pointcloud):
         assert len(pointcloud.shape)==2
-        norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0) # translate to origin
-        norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1)) # normalize
-        return  norm_pointcloud
+        if pointcloud.shape[1] == 3: # without normals
+            norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0) # translate to origin
+            norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1)) # normalize
+            return norm_pointcloud
+
+        else: # with normals
+            pointcloud_tmp, pointcloud_norm = np.split(pointcloud, 2, axis=1)
+            # translate points to origin
+            norm_pointcloud_tmp = pointcloud_tmp - np.mean(pointcloud_tmp, axis=0)
+            # normalize points
+            norm_pointcloud_tmp /= np.max(np.linalg.norm(norm_pointcloud_tmp, axis=1))
+            norm_pointcloud = np.concatenate((norm_pointcloud_tmp, pointcloud_norm), axis=1)
+            return  norm_pointcloud
 
 
 class ToTensor(object):
