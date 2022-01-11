@@ -1,8 +1,3 @@
-"""
-Author: Benny
-Date: Nov 2019
-"""
-
 import os
 import sys
 import torch
@@ -44,6 +39,7 @@ def parse_args():
     parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
     parser.add_argument('--num_sparse_point', type=int, default=10, help='Point Number for domain loss')
     parser.add_argument('--SO3_Rotation', action='store_true', default=False, help='arbitrary rotation in SO3')
+    parser.add_argument('--DA_method', type=str, default="coral", help='choose the DA loss function')
     return parser.parse_args()
 
 
@@ -178,15 +174,19 @@ def main(args):
 
     classifier = model.get_model(num_class, normal_channel=args.use_normals)
     criterion = model.get_loss()
-    criterion_coral = model.get_coral_loss()
-    criterion_mmd = model.get_mmd_loss()
+    if args.DA_method == "coral":
+        criterion_DA = model.get_coral_loss()
+    elif args.DA_method == "mmd":
+        criterion_DA = model.get_mmd_loss()
+    else:
+        raise NameError("Wrong input for DA method name!")
+
     classifier.apply(inplace_relu)
 
     if not args.use_cpu:
         classifier = classifier.cuda()
         criterion = criterion.cuda()
-        criterion_coral = criterion_coral.cuda()
-        criterion_mmd = criterion_mmd.cuda()
+        criterion_DA = criterion_DA.cuda()
 
     try:
         checkpoint = torch.load(str(exp_dir) + '/checkpoints/best_model.pth')
@@ -285,8 +285,7 @@ def main(args):
 
             # change the loss here for testing!!!
             # loss = criterion_coral(pred, target.long(), trans_feat, feature_dense, feature_coral)
-            loss = criterion_mmd(pred, target.long(), trans_feat, feature_dense, feature_DA)
-            # print(loss)
+            loss = criterion_DA(pred, target.long(), trans_feat, feature_dense, feature_DA)
 
             pred_choice = pred.data.max(1)[1]
 
