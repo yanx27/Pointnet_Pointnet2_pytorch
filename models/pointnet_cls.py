@@ -118,7 +118,7 @@ class get_mmd_loss(torch.nn.Module):
         loss = F.nll_loss(pred, target)
         mat_diff_loss = feature_transform_reguliarzer(trans_feat)
         batch_size = int(pred.size()[0])
-        kernels = guassian_kernel(feature_dense, feature_sparse, kernel_mul=self.kernel_mul,
+        kernels = self.guassian_kernel(feature_dense, feature_sparse, kernel_mul=self.kernel_mul,
                                   kernel_num=self.kernel_num, fix_sigma=self.fix_sigma)
 
         XX = torch.mean(kernels[:batch_size, :batch_size])
