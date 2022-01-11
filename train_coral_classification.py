@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--use_normals', action='store_true', default=False, help='use normals')
     parser.add_argument('--process_data', action='store_true', default=False, help='save data offline')
     parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
-    parser.add_argument('--num_sparse_point', type=int, default=10, help='Point Number for coral loss')
+    parser.add_argument('--num_sparse_point', type=int, default=10, help='Point Number for domain loss')
     parser.add_argument('--SO3_Rotation', action='store_true', default=False, help='arbitrary rotation in SO3')
     return parser.parse_args()
 
@@ -134,7 +134,7 @@ def main(args):
             ToTensor()
             ])
 
-    coral_transforms = transforms.Compose([
+    domain_adaptation_transforms = transforms.Compose([
         PointSampler(args.num_sparse_point, with_normal=args.use_normals),
             Normalize(),
             RandRotation_z(with_normal=args.use_normals, SO3=args.SO3_Rotation),
@@ -154,11 +154,11 @@ def main(args):
     # test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=args.process_data)
 
     train_dataset = PointCloudData(data_path, transform=train_transforms)
-    coral_dataset = PointCloudData(data_path, transform=coral_transforms)
+    domain_adaptation_dataset = PointCloudData(data_path, transform=domain_adaptation_transforms)
     test_dataset = PointCloudData(data_path, valid=True, folder='test', transform=test_transforms)
 
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
-    coralDataLoader = torch.utils.data.DataLoader(coral_dataset, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
+    domainAdaptationDataLoader = torch.utils.data.DataLoader(domain_adaptation_dataset, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
     testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=10)
 
     '''Output conv layers'''
@@ -179,12 +179,14 @@ def main(args):
     classifier = model.get_model(num_class, normal_channel=args.use_normals)
     criterion = model.get_loss()
     criterion_coral = model.get_coral_loss()
+    criterion_mmd = model.get_mmd_loss()
     classifier.apply(inplace_relu)
 
     if not args.use_cpu:
         classifier = classifier.cuda()
         criterion = criterion.cuda()
         criterion_coral = criterion_coral.cuda()
+        criterion_mmd = criterion_mmd.cuda()
 
     try:
         checkpoint = torch.load(str(exp_dir) + '/checkpoints/best_model.pth')
@@ -239,14 +241,14 @@ def main(args):
 
         scheduler.step()
         # for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
-        for batch_id, (data, data_coral) in tqdm(
-                enumerate(zip(trainDataLoader,coralDataLoader), 0),
+        for batch_id, (data, data_DA) in tqdm(
+                enumerate(zip(trainDataLoader,domainAdaptationDataLoader), 0),
                 total=len(trainDataLoader),
                 smoothing=0.9):
 
             optimizer.zero_grad()
             points, target = data['pointcloud'].to(device).float(), data['category'].to(device)
-            points_coral = data_coral['pointcloud'].to(device).float()
+            points_DA = data_DA['pointcloud'].to(device).float()
 
             points = points.data.cpu().numpy()
             points = provider.random_point_dropout(points)
@@ -255,16 +257,16 @@ def main(args):
             points = torch.Tensor(points)
             points = points.transpose(2, 1)
 
-            points_coral = points_coral.data.cpu().numpy()
-            points_coral = provider.random_point_dropout(points_coral)
-            points_coral[:, :, 0:3] = provider.random_scale_point_cloud(points_coral[:, :, 0:3])
-            points_coral[:, :, 0:3] = provider.shift_point_cloud(points_coral[:, :, 0:3])
-            points_coral = torch.Tensor(points_coral)
-            points_coral = points_coral.transpose(2, 1)
+            points_DA = points_DA.data.cpu().numpy()
+            points_DA = provider.random_point_dropout(points_DA)
+            points_DA[:, :, 0:3] = provider.random_scale_point_cloud(points_DA[:, :, 0:3])
+            points_DA[:, :, 0:3] = provider.shift_point_cloud(points_DA[:, :, 0:3])
+            points_DA = torch.Tensor(points_DA)
+            points_DA = points_DA.transpose(2, 1)
 
             if not args.use_cpu:
                 points, target = points.cuda(), target.cuda()
-                points_coral = points_coral.cuda()
+                points_DA = points_DA.cuda()
 
             pred, trans_feat = classifier(points)
             # loss = criterion(pred, target.long(), trans_feat)
@@ -274,14 +276,16 @@ def main(args):
             feature_dense = activation['feat']
 
             classifier.feat.register_forward_hook(get_activation('feat'))
-            output_coral = classifier(points_coral)
-            feature_coral = activation['feat']
+            output_DA = classifier(points_DA)
+            feature_DA = activation['feat']
             # print(output.size())
             # print("----------------------")
             # print(feature_dense.size())
             # print(feature_coral.size())
 
-            loss = criterion_coral(pred, target.long(), trans_feat, feature_dense, feature_coral)
+            # change the loss here for testing!!!
+            # loss = criterion_coral(pred, target.long(), trans_feat, feature_dense, feature_coral)
+            loss = criterion_mmd(pred, target.long(), trans_feat, feature_dense, feature_DA)
             # print(loss)
 
             pred_choice = pred.data.max(1)[1]
