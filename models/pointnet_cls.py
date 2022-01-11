@@ -4,6 +4,23 @@ import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
 from pointnet_utils import PointNetEncoder, feature_transform_reguliarzer
+from sklearn import metrics
+
+def mmd_rbf(X, Y, gamma=1.0):
+    """MMD using rbf (gaussian) kernel (i.e., k(x,y) = exp(-gamma * ||x-y||^2 / 2))
+    Arguments:
+        X {[n_sample1, dim]} -- [X matrix]
+        Y {[n_sample2, dim]} -- [Y matrix]
+    Keyword Arguments:
+        gamma {float} -- [kernel parameter] (default: {1.0})
+    Returns:
+        [scalar] -- [MMD value]
+    """
+    XX = metrics.pairwise.rbf_kernel(X, X, gamma)
+    YY = metrics.pairwise.rbf_kernel(Y, Y, gamma)
+    XY = metrics.pairwise.rbf_kernel(X, Y, gamma)
+    return XX.mean() + YY.mean() - 2 * XY.mean()
+
 
 def coral(source, target):
 
@@ -37,6 +54,7 @@ def compute_covariance(input_data):
     d_t_d = torch.mm(input_data.t(), input_data)
     c = torch.add(d_t_d, (-1 * term_mul_2)) * 1 / (n - 1)
     return c
+
 
 class get_model(nn.Module):
     def __init__(self, k=40, normal_channel=True):
@@ -75,7 +93,7 @@ class get_loss(torch.nn.Module):
         return total_loss
 
 class get_coral_loss(torch.nn.Module):
-    def __init__(self, mat_diff_loss_scale=0.001, domain_adaptation_param=0.5):
+    def __init__(self, domain_adaptation_param=0.5, mat_diff_loss_scale=0.001)
         super(get_coral_loss, self).__init__()
         self.mat_diff_loss_scale = mat_diff_loss_scale
         self.domain_adaptation_param = domain_adaptation_param
@@ -86,3 +104,23 @@ class get_coral_loss(torch.nn.Module):
         coral_loss = coral(feature_dense, feature_sparse)
         total_loss = loss + mat_diff_loss * self.mat_diff_loss_scale + self.domain_adaptation_param * coral_loss
         return total_loss
+
+
+class get_mmd_loss(torch.nn.Module):
+    def __init__(self, domain_adaptation_param=0.5, gamma=1.0, mat_diff_loss_scale=0.001):
+        super(get_mmd_loss, self).__init__()
+        self.gamma = gamma
+        self.domain_adaptation_param = domain_adaptation_param
+
+    def forward(self, pred, target, trans_feat, feature_dense, feature_sparse):
+        loss = F.nll_loss(pred, target)
+        mat_diff_loss = feature_transform_reguliarzer(trans_feat)
+        mmd_loss = mmd_rbf(feature_dense, feature_sparse, self.gamma)
+        total_loss = loss + mat_diff_loss * self.mat_diff_loss_scale + self.domain_adaptation_param * mmd_loss
+        return total_loss
+
+
+
+
+
+
