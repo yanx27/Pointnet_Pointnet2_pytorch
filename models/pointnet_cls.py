@@ -76,23 +76,25 @@ class get_loss(torch.nn.Module):
         return total_loss
 
 class get_coral_loss(torch.nn.Module):
-    def __init__(self, domain_adaptation_param=0.5, mat_diff_loss_scale=0.001):
+    def __init__(self, DA_alpha=0.1, DA_lamda=0.5, mat_diff_loss_scale=0.001):
         super(get_coral_loss, self).__init__()
         self.mat_diff_loss_scale = mat_diff_loss_scale
-        self.domain_adaptation_param = domain_adaptation_param
+        self.DA_lamda = DA_lamda
+        self.DA_alpha = DA_alpha
 
     def forward(self, pred, target, trans_feat, feature_dense, feature_sparse):
         loss = F.nll_loss(pred, target)
         mat_diff_loss = feature_transform_reguliarzer(trans_feat)
         coral_loss = coral(feature_dense, feature_sparse)
-        total_loss = loss + mat_diff_loss * self.mat_diff_loss_scale + self.domain_adaptation_param * coral_loss
+        total_loss = self.alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * coral_loss
         return total_loss
 
 
 class get_mmd_loss(torch.nn.Module):
-    def __init__(self, domain_adaptation_param=0.5, mat_diff_loss_scale=0.001, kernel_mul = 2.0, kernel_num = 5):
+    def __init__(self, DA_alpha=0.1, DA_lamda=0.5, mat_diff_loss_scale=0.001, kernel_mul = 2.0, kernel_num = 5):
         super(get_mmd_loss, self).__init__()
-        self.domain_adaptation_param = domain_adaptation_param
+        self.DA_lamda = DA_lamda
+        self.DA_alpha = DA_alpha
         self.mat_diff_loss_scale = mat_diff_loss_scale
         self.kernel_num = kernel_num
         self.kernel_mul = kernel_mul
@@ -126,7 +128,7 @@ class get_mmd_loss(torch.nn.Module):
         XY = torch.mean(kernels[:batch_size, batch_size:])
         YX = torch.mean(kernels[batch_size:, :batch_size])
         mmd_loss = torch.mean(XX + YY - XY -YX)
-        total_loss = loss + mat_diff_loss * self.mat_diff_loss_scale + self.domain_adaptation_param * mmd_loss
+        total_loss =self.alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * mmd_loss
         return total_loss
 
 
