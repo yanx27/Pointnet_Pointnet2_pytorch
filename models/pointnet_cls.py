@@ -86,7 +86,7 @@ class get_coral_loss(torch.nn.Module):
         loss = F.nll_loss(pred, target)
         mat_diff_loss = feature_transform_reguliarzer(trans_feat)
         coral_loss = coral(feature_dense, feature_sparse)
-        total_loss = self.alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * coral_loss
+        total_loss = self.DA_alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * coral_loss
         return total_loss
 
 
@@ -128,7 +128,7 @@ class get_mmd_loss(torch.nn.Module):
         XY = torch.mean(kernels[:batch_size, batch_size:])
         YX = torch.mean(kernels[batch_size:, :batch_size])
         mmd_loss = torch.mean(XX + YY - XY -YX)
-        total_loss =self.alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * mmd_loss
+        total_loss =self.DA_alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * mmd_loss
         return total_loss
 
 
