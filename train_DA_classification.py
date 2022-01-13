@@ -178,6 +178,8 @@ def main(args):
         criterion_DA = model.get_coral_loss()
     elif args.DA_method == "mmd":
         criterion_DA = model.get_mmd_loss()
+    elif args.DA_method == "coral_mmd":
+        criterion_DA = model.get_coral_mmd_loss()
     else:
         raise NameError("Wrong input for DA method name!")
 
