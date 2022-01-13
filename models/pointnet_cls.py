@@ -132,8 +132,7 @@ class get_mmd_loss(torch.nn.Module):
         XY = torch.mean(kernels[:batch_size, batch_size:])
         YX = torch.mean(kernels[batch_size:, :batch_size])
         mmd_loss = torch.mean(XX + YY - XY -YX)
-        total_loss =self.DA_alpha * loss + mat_diff_loss * self.mat_diff_loss_scale +
-                    self.DA_lamda * mmd_loss
+        total_loss =self.DA_alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_lamda * mmd_loss
         return total_loss
 
 class get_coral_mmd_loss(get_mmd_loss):
