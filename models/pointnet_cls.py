@@ -136,11 +136,12 @@ class get_mmd_loss(torch.nn.Module):
         return total_loss
 
 class get_coral_mmd_loss(get_mmd_loss):
-    def __init__(self, DA_alpha=0.1, DA_lamda=0.5,
+    def __init__(self, DA_alpha=10, DA_beta=0.5, DA_lamda=0.5,
                  mat_diff_loss_scale=0.001, kernel_mul = 2.0, kernel_num = 5):
-        super(get_coral_mmd_loss, self).__init__(DA_alpha=0.1, DA_lamda=0.5,
-                                                 mat_diff_loss_scale=0.001,
-                                                 kernel_mul = 2.0, kernel_num = 5)
+        super(get_coral_mmd_loss, self).__init__(DA_alpha, DA_lamda,
+                                                 mat_diff_loss_scale,
+                                                 kernel_mul, kernel_num)
+        self.DA_beta = DA_beta
 
     def forward(self, pred, target, trans_feat, feature_dense, feature_sparse):
         loss = F.nll_loss(pred, target)
@@ -157,7 +158,7 @@ class get_coral_mmd_loss(get_mmd_loss):
         coral_loss = coral(feature_dense, feature_sparse)
         # total_loss =self.DA_alpha * loss + mat_diff_loss * self.mat_diff_loss_scale +
         #             self.DA_lamda * mmd_loss
-        total_loss = loss + mat_diff_loss * self.mat_diff_loss_scale + coral_loss + mmd_loss
+        total_loss = self.DA_alpha * loss + mat_diff_loss * self.mat_diff_loss_scale + self.DA_beta * mmd_loss + self.DA_lamda * coral_loss
         return total_loss
 
 

@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--model', default='pointnet_cls', help='model name [default: pointnet_cls]')
     parser.add_argument('--num_category', default=10, type=int, choices=[10, 40],  help='training on ModelNet10/40')
     parser.add_argument('--epoch', default=20, type=int, help='number of epoch in training')
-    parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
+    parser.add_argument('--learning_rate', default=0.01, type=float, help='learning rate in training')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number')
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer for training')
     parser.add_argument('--log_dir', type=str, default=None, help='experiment root')
@@ -40,8 +40,9 @@ def parse_args():
     parser.add_argument('--num_sparse_point', type=int, default=30, help='Point Number for domain loss')
     parser.add_argument('--SO3_Rotation', action='store_true', default=False, help='arbitrary rotation in SO3')
     parser.add_argument('--DA_method', type=str, default="coral", help='choose the DA loss function')
-    parser.add_argument('--alpha', type=float, default=1.0, help='set the value of classification loss')
-    parser.add_argument('--lamda', type=float, default=0.5, help='set the value of DA loss')
+    parser.add_argument('--alpha', type=float, default=10, help='set the value of classification loss')
+    parser.add_argument('--lamda', type=float, default=0.5, help='set the value of CORAL loss')
+    parser.add_argument('--beta', type=float, default=0.5, help='set the value of MMD loss')
     return parser.parse_args()
 
 
@@ -181,7 +182,8 @@ def main(args):
     elif args.DA_method == "mmd":
         criterion_DA = model.get_mmd_loss(DA_alpha=args.alpha, DA_lamda=args.lamda)
     elif args.DA_method == "coral_mmd":
-        criterion_DA = model.get_coral_mmd_loss(DA_alpha=args.alpha, DA_lamda=args.lamda)
+        criterion_DA = model.get_coral_mmd_loss(DA_alpha=args.alpha,DA_beta=args.beta,
+                                                DA_lamda=args.lamda)
     else:
         raise NameError("Wrong input for DA method name!")
 
