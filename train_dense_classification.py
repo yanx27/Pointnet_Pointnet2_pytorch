@@ -90,7 +90,7 @@ def main(args):
 
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
+    num_class = args.num_category
     '''CREATE DIR'''
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     exp_dir = Path('./log/')
@@ -122,7 +122,10 @@ def main(args):
     '''DATA LOADING'''
     log_string('Load dataset ...')
     # data_path = 'data/modelnet40_normal_resampled/'
-    data_path = Path("mesh_data/ModelNet10")
+    if num_class == 10:
+        data_path = Path("mesh_data/ModelNet10")
+    elif num_class == 40:
+        data_path = Path("mesh_data/ModelNet40")
 
     train_transforms = transforms.Compose([
         PointSampler(args.num_point, with_normal=args.use_normals),
@@ -150,7 +153,6 @@ def main(args):
     testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=10)
 
     '''MODEL LOADING'''
-    num_class = args.num_category
     model = importlib.import_module(args.model)
     shutil.copy('./models/%s.py' % args.model, str(exp_dir))
     shutil.copy('models/pointnet2_utils.py', str(exp_dir))

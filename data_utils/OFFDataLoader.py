@@ -10,7 +10,8 @@ from torchvision import transforms, utils
 
 from pathlib import Path
 
-PATH= Path("../mesh_data/ModelNet10")
+# PATH= Path("../mesh_data/ModelNet10")
+PATH= Path("../mesh_data/ModelNet40")
 class RandRotation_z(object):
     def __init__(self, with_normal=False, SO3=False):
         self.with_normal = with_normal
@@ -143,7 +144,8 @@ def default_transforms():
 
 def read_off(file):
     if 'OFF' != file.readline().strip(): # this is the first line of the file
-        raise('Not a valid OFF header')
+        print(file.readline().strip())
+        # raise('Not a valid OFF header')
     n_verts, n_faces, __ = tuple([int(s) for s in file.readline().strip().split(' ')])
     verts = [[float(s) for s in file.readline().strip().split(' ')] for i_vert in range(n_verts)]
     faces = [[int(s) for s in file.readline().strip().split(' ')][1:] for i_face in range(n_faces)]
