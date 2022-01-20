@@ -151,7 +151,7 @@ def read_off(file):
         n_verts, n_faces, __ = tuple([int(s) for s in first_line.strip().split(' ')])
     else:
         n_verts, n_faces, __ = tuple([int(s) for s in file.readline().strip().split(' ')])
-    print(n_verts, n_faces)
+    # print(n_verts, n_faces)
     verts = [[float(s) for s in file.readline().strip().split(' ')] for i_vert in range(n_verts)]
     faces = [[int(s) for s in file.readline().strip().split(' ')][1:] for i_face in range(n_faces)]
     return verts, faces
