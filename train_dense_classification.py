@@ -126,6 +126,8 @@ def main(args):
         data_path = Path("mesh_data/ModelNet10")
     elif num_class == 40:
         data_path = Path("mesh_data/ModelNet40")
+    else:
+        raise ValueError("Not a valid category input")
 
     train_transforms = transforms.Compose([
         PointSampler(args.num_point, with_normal=args.use_normals),

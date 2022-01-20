@@ -143,13 +143,15 @@ def default_transforms():
                                ])
 
 def read_off(file):
-    print(file.readline().strip())
-    if 'OFF' != file.readline().strip(): # this is the first line of the file
-        print("1111111")
-        # raise('Not a valid OFF header')
-    for s in file.readline().strip().split(' '):
-        print(s)
-    n_verts, n_faces, __ = tuple([int(s) for s in file.readline().strip().split(' ')])
+    head = file.readline().strip() # this is the first line of the file
+    if 'OFF' != head:
+        # print("1111111")
+        # print(file)
+        first_line = head.strip("OFF")
+        n_verts, n_faces, __ = tuple([int(s) for s in first_line.strip().split(' ')])
+    else:
+        n_verts, n_faces, __ = tuple([int(s) for s in file.readline().strip().split(' ')])
+    print(n_verts, n_faces)
     verts = [[float(s) for s in file.readline().strip().split(' ')] for i_vert in range(n_verts)]
     faces = [[int(s) for s in file.readline().strip().split(' ')][1:] for i_face in range(n_faces)]
     return verts, faces
