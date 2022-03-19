@@ -105,7 +105,7 @@ def main(args):
         classifier = classifier.cuda()
 
     torch_load_map_location = torch.device('cpu') if args.use_cpu else torch.device('cuda')
-    torch.load(str(experiment_dir) + '/checkpoints/best_model.pth', map_location=torch_load_map_location)
+    checkpoint = torch.load(str(experiment_dir) + '/checkpoints/best_model.pth', map_location=torch_load_map_location)
 
     classifier.load_state_dict(checkpoint['model_state_dict'])
 
