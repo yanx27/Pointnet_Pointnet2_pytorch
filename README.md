@@ -172,4 +172,4 @@ If you find this repo useful in your research, please consider citing it and our
 * [On Isometry Robustness of Deep 3D Point Cloud Models under Adversarial Attacks, CVPR'20](https://github.com/skywalker6174/3d-isometry-robust)
 * [Label-Efficient Learning on Point Clouds using Approximate Convex Decompositions, ECCV'20](https://github.com/matheusgadelha/PointCloudLearningACD)
 * [PCT: Point Cloud Transformer](https://github.com/MenghaoGuo/PCT)
-* [Point Sampling Net: Fast Subsampling and Local Grouping for Deep Learning on Point Cloud](https://github.com/psn-anonymous/PointSamplingNet)
+* [PSNet: Fast Data Structuring for Hierarchical Deep Learning on Point Cloud](https://github.com/lly007/PointStructuringNet)
