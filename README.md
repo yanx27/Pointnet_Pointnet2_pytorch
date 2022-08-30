@@ -103,7 +103,7 @@ Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stan
 cd data_utils
 python collect_indoor3d_data.py
 ```
-Processed data will save in `data/s3dis/stanford_indoor3d/`.
+Processed data will save in `data/stanford_indoor3d/`.
 ### Run
 ```
 ## Check model in ./models 

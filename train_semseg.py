@@ -88,7 +88,7 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    root = 'data/s3dis/stanford_indoor3d/'
+    root = 'data/stanford_indoor3d/'
     NUM_CLASSES = 13
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
