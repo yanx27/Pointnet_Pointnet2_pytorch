@@ -166,10 +166,18 @@ If you find this repo useful in your research, please consider citing it and our
   year={2021}
 }
 ```
-
+```
+@InProceedings{yan20222dpass,
+      title={2DPASS: 2D Priors Assisted Semantic Segmentation on LiDAR Point Clouds}, 
+      author={Xu Yan and Jiantao Gao and Chaoda Zheng and Chao Zheng and Ruimao Zhang and Shuguang Cui and Zhen Li},
+      year={2022},
+      journal={ECCV}
+}
+```
 ## Selected Projects using This Codebase
 * [PointConv: Deep Convolutional Networks on 3D Point Clouds, CVPR'19](https://github.com/Young98CN/pointconv_pytorch)
 * [On Isometry Robustness of Deep 3D Point Cloud Models under Adversarial Attacks, CVPR'20](https://github.com/skywalker6174/3d-isometry-robust)
 * [Label-Efficient Learning on Point Clouds using Approximate Convex Decompositions, ECCV'20](https://github.com/matheusgadelha/PointCloudLearningACD)
 * [PCT: Point Cloud Transformer](https://github.com/MenghaoGuo/PCT)
 * [PSNet: Fast Data Structuring for Hierarchical Deep Learning on Point Cloud](https://github.com/lly007/PointStructuringNet)
+* [Stratified Transformer for 3D Point Cloud Segmentation, CVPR'22](https://github.com/dvlab-research/stratified-transformer)
