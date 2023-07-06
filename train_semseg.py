@@ -199,7 +199,7 @@ def main(args):
             correct = np.sum(pred_choice == batch_label)
             total_correct += correct
             total_seen += (BATCH_SIZE * NUM_POINT)
-            loss_sum += loss
+            loss_sum += loss.item()
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
