@@ -112,3 +112,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/data/s3dis/
+/data/stanford_indoor3d/

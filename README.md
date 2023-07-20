@@ -2,6 +2,9 @@
 
 This repo is implementation for [PointNet](http://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf) and [PointNet++](http://papers.nips.cc/paper/7095-pointnet-deep-hierarchical-feature-learning-on-point-sets-in-a-metric-space.pdf) in pytorch.
 
+Research paper:
+https://arxiv.org/pdf/1612.00593.pdf
+
 ## Update
 **2021/03/27:** 
 
@@ -98,18 +101,29 @@ python test_partseg.py --normal --log_dir pointnet2_part_seg_msg
 
 ## Semantic Segmentation (S3DIS)
 ### Data Preparation
-Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stanford.edu/dataset.html)  and save in `data/s3dis/Stanford3dDataset_v1.2_Aligned_Version/`.
+Download 3D indoor parsing dataset (**S3DIS**) [here](http://buildingparser.stanford.edu/dataset.html)  and save in 
+`data/s3dis/Stanford3dDataset_v1.2_Aligned_Version/` or use your own data under the same directory name and structure.
 ```
-cd data_utils
-python collect_indoor3d_data.py
+python create_files.py
+```
+The previous line creates the needed file content for the `./data_utils/meta/anno_paths.txt` and 
+`/data_utils/meta/class_names.txt` files.
+
+#### Make sure that the classes created in `/data_utils/meta/class_names.txt` match with the classes found in the 
+`g_class2color` dictionary found in `/data_utils/indor3d_util.py`
+
+The following command proceeds to preprocess the data by loading the point cloud labeled text files and store them into
+numpy arrays.
+```
+python data_utils/collect_indoor3d_data.py
 ```
 Processed data will save in `data/stanford_indoor3d/`.
 ### Run
 ```
 ## Check model in ./models 
 ## e.g., pointnet2_ssg
-python train_semseg.py --model pointnet2_sem_seg --test_area 5 --log_dir pointnet2_sem_seg
-python test_semseg.py --log_dir pointnet2_sem_seg --test_area 5 --visual
+python train_semseg.py --model pointnet2_sem_seg --test_area 1 --log_dir pointnet2_sem_seg --gpu 1
+python test_semseg.py --log_dir pointnet2_sem_seg --test_area 1 --visual
 ```
 Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and you can visualize these .obj file by [MeshLab](http://www.meshlab.net/).
 
@@ -118,6 +132,14 @@ Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and y
 |--|--|--|--|
 | PointNet (Pytorch) | 78.9 | 43.7| [40.7MB](log/sem_seg/pointnet_sem_seg) |
 | PointNet2_ssg (Pytorch) | **83.0** | **53.5**| [11.2MB](log/sem_seg/pointnet2_sem_seg) |
+
+
+### Note:
+Even though it is not mentioned in the test examples, the msg (Multi-Scale Grouping) model can be also used for semantic segmentation.
+```
+python train_semseg.py --model pointnet2_sem_seg_msg --test_area 1 --log_dir pointnet2_sem_seg_msg --gpu 1
+```
+
 
 ## Visualization
 ### Using show3d_balls.py

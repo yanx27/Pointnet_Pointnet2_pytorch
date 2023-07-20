@@ -4,6 +4,8 @@ Date: Nov 2019
 """
 import argparse
 import os
+import random
+
 from data_utils.S3DISDataLoader import S3DISDataset
 import torch
 import datetime
@@ -16,13 +18,14 @@ from tqdm import tqdm
 import provider
 import numpy as np
 import time
+from data_utils.indoor3d_util import g_classes
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
-classes = ['ceiling', 'floor', 'wall', 'beam', 'column', 'window', 'door', 'table', 'chair', 'sofa', 'bookcase',
-           'board', 'clutter']
+classes = g_classes
+print("classes: ", classes)
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
@@ -33,6 +36,16 @@ def inplace_relu(m):
     classname = m.__class__.__name__
     if classname.find('ReLU') != -1:
         m.inplace=True
+
+def my_worker_init_fn(worker_id):
+    np.random.seed(worker_id + int(time.time()))
+
+def worker_init_fn(worker_id):
+    torch_seed = torch.initial_seed()
+    random.seed(torch_seed + worker_id)
+    if torch_seed >= 2**30:  # make sure torch_seed + workder_id < 2**32
+        torch_seed = torch_seed % 2**30
+    np.random.seed(torch_seed + worker_id)
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
@@ -89,14 +102,15 @@ def main(args):
     log_string(args)
 
     root = 'data/stanford_indoor3d/'
-    NUM_CLASSES = 13
+    NUM_CLASSES = len(classes)
+    print('NUM_CLASSES: ', NUM_CLASSES)
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
 
     print("start loading training data ...")
-    TRAIN_DATASET = S3DISDataset(split='train', data_root=root, num_point=NUM_POINT, test_area=args.test_area, block_size=1.0, sample_rate=1.0, transform=None)
+    TRAIN_DATASET = S3DISDataset(split='train', data_root=root, num_point=NUM_POINT, test_area=args.test_area, block_size=1.5, sample_rate=1.0, transform=None)
     print("start loading test data ...")
-    TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area, block_size=1.0, sample_rate=1.0, transform=None)
+    TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area, block_size=1.5, sample_rate=1.0, transform=None)
 
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=10,
                                                   pin_memory=True, drop_last=True,
